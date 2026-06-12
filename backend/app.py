@@ -51,9 +51,9 @@ app = FastAPI()
 
 # CORS origin from .env(no uvicorn reload needed)
 CORS_ORIGINS = [
+    "https://voyageranalytics.netlify.app",
     "http://127.0.0.1:5500",
-    "http://localhost:5500",
-    "https://villainwrldwyd.github.io"
+    "http://localhost:5500"
 ]
 
 app.add_middleware(
