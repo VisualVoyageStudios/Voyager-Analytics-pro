@@ -1,0 +1,503 @@
+/* ── Economic Heatmap Styles ── */
+.heatmap-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+ 
+.heatmap-controls select,
+.heatmap-controls input {
+    background: #101827;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+}
+ 
+.heatmap-controls select:focus,
+.heatmap-controls input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+ 
+/* Country tabs */
+.country-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+ 
+.country-tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #101827;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+ 
+.country-tab:hover {
+    border-color: var(--primary);
+    color: white;
+}
+ 
+.country-tab.active {
+    background: rgba(59,130,246,0.15);
+    border-color: var(--primary);
+    color: white;
+}
+ 
+.country-tab .flag {
+    font-size: 16px;
+}
+ 
+/* Sentiment indicator */
+.sentiment-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 20px;
+    background: #101827;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+ 
+.sentiment-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+ 
+.sentiment-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+ 
+.sentiment-label {
+    color: var(--muted);
+}
+ 
+.sentiment-value {
+    font-weight: 700;
+}
+ 
+/* Country score cards */
+.country-scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+}
+ 
+.score-card {
+    background: #101827;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+ 
+.score-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+}
+ 
+.score-card.bullish::before  { background: #3b82f6; }
+.score-card.bearish::before  { background: #ef4444; }
+.score-card.neutral::before  { background: #94a3b8; }
+ 
+.score-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.15);
+}
+ 
+.score-card .flag {
+    font-size: 24px;
+    margin-bottom: 6px;
+    display: block;
+}
+ 
+.score-card .country-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+ 
+.score-card .score-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+}
+ 
+.score-card.bullish  .score-num { color: #3b82f6; }
+.score-card.bearish  .score-num { color: #ef4444; }
+.score-card.neutral  .score-num { color: #94a3b8; }
+ 
+.score-card .score-label {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+ 
+/* Main heatmap table */
+.heatmap-table-wrapper {
+    background: #101827;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+ 
+.heatmap-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+ 
+.heatmap-table thead tr {
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+}
+ 
+.heatmap-table th {
+    padding: 14px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    white-space: nowrap;
+}
+ 
+.heatmap-table th:nth-child(4),
+.heatmap-table th:nth-child(5),
+.heatmap-table th:nth-child(6) {
+    text-align: right;
+}
+ 
+.heatmap-table td {
+    padding: 13px 16px;
+    font-size: 13px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+}
+ 
+.heatmap-table tr:hover td {
+    background: rgba(255,255,255,0.02);
+}
+ 
+/* Event name */
+.event-name {
+    font-weight: 600;
+    color: white;
+    font-size: 13px;
+    max-width: 260px;
+}
+ 
+.event-country {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+ 
+/* Impact badge */
+.impact-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+ 
+.impact-high   { background: rgba(239,68,68,0.12);   color: #ef4444; }
+.impact-medium { background: rgba(234,179,8,0.12);   color: #f0bf2d; }
+.impact-low    { background: rgba(148,163,184,0.1);  color: #94a3b8; }
+ 
+/* Numeric cells */
+.num-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+}
+ 
+.val-actual  { color: white; font-weight: 600; }
+.val-forecast { color: var(--muted); }
+ 
+/* Change cell */
+.change-cell {
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    white-space: nowrap;
+}
+ 
+.change-positive { color: #3b82f6; }
+.change-negative { color: #ef4444; }
+.change-neutral  { color: #94a3b8; }
+ 
+.change-bar {
+    display: inline-block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    margin-left: 6px;
+    vertical-align: middle;
+    opacity: 0.7;
+}
+ 
+/* Date cell */
+.date-cell {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+ 
+.date-recent {
+    background: rgba(234,179,8,0.12);
+    color: #f0bf2d;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 11px;
+}
+ 
+/* Pair impact panel */
+.pair-impact-section {
+    margin-top: 24px;
+}
+ 
+.pair-impact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+ 
+.pair-card {
+    background: #101827;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+}
+ 
+.pair-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-2px);
+}
+ 
+.pair-name {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+ 
+.pair-bias {
+    font-size: 12px;
+    margin-top: 3px;
+    font-weight: 600;
+}
+ 
+.pair-bias.bullish { color: #3b82f6; }
+.pair-bias.bearish { color: #ef4444; }
+.pair-bias.neutral { color: #94a3b8; }
+ 
+.pair-score-pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+}
+ 
+.pair-score-pill.bullish { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.pair-score-pill.bearish { background: rgba(239,68,68,0.12);  color: #ef4444; }
+.pair-score-pill.neutral { background: rgba(148,163,184,0.1); color: #94a3b8; }
+ 
+/* AI insight box */
+.ai-insight {
+    background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(123,97,255,0.06));
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+ 
+.ai-insight::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6, #7b61ff);
+}
+ 
+.ai-insight-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+ 
+.ai-insight-header i {
+    color: #3b82f6;
+    font-size: 16px;
+}
+ 
+.ai-insight-header span {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #3b82f6;
+}
+ 
+.ai-insight p {
+    font-size: 14px;
+    color: #cbd5e1;
+    line-height: 1.7;
+}
+ 
+.ai-insight p.loading-text {
+    color: var(--muted);
+    font-style: italic;
+}
+ 
+/* Legend */
+.legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    align-items: center;
+}
+ 
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+ 
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+ 
+/* Loader state */
+.table-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+}
+ 
+.table-loading i {
+    font-size: 2rem;
+    margin-bottom: 12px;
+    display: block;
+    opacity: 0.3;
+}
+ 
+/* Section heading */
+.section-heading {
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+ 
+.section-heading i {
+    color: var(--primary);
+    font-size: 14px;
+}
+ 
+/* Pair filter chips */
+.pair-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+ 
+.pair-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: #101827;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+ 
+.pair-chip:hover,
+.pair-chip.active {
+    border-color: var(--primary);
+    background: rgba(59,130,246,0.12);
+    color: white;
+}
+ 
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+}
+ 
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 14px;
+    display: block;
+    opacity: 0.2;
+}
+ 
+/* Responsive */
+@media (max-width: 768px) {
+    .heatmap-table th:nth-child(5),
+    .heatmap-table td:nth-child(5) { display: none; }
+    .country-scores { grid-template-columns: repeat(3, 1fr); }
+}
