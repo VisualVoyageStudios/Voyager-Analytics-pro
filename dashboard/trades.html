@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trades | Voyager Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader">
+    <div class="spinner"></div>
+</div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+
+        <nav>
+            <a href="dashboard.html">
+                <i class="fas fa-tachograph-digital">Dashboard</i>
+            </a>
+            <a href="accounts.html">
+                <i class="fas fa-briefcase">Accounts</i>
+            </a>
+            <a href="trades.html" class="active">
+                <i class="fas fa-chart-line">Trades</i>
+            </a>
+            <a href="analytics.html">
+                <i class="fas fa-eye">Analytics</i>
+            </a>
+            <a href="journal.html">
+                <i class="fas fa-book-open-reader">Journal</i>
+            </a>
+            <a href="settings.html">
+                <i class="fas fa-gears">Settings</i>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h2>Trade History</h2>
+            <button class="btn-primary" id="exportBtn">
+                <i class="fas fa-cloud-arrow-up"></i> Export
+            </button>
+        </header>
+
+        <section class="filters">
+            <input
+                type="text"
+                id="searchTrade"
+                placeholder="Search Symbol..."
+            >
+            <select id="directionFilter">
+                <option value="">All Trades</option>
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+            </select>
+            <select id="resultFilter">
+                <option value="">All Results</option>
+                <option value="profit">Profit</option>
+                <option value="loss">Loss</option>
+            </select>
+        </section>
+
+        <section class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Type</th>
+                        <th>Lot Size</th>
+                        <th>Profit</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tradesTable"></tbody>
+            </table>
+        </section>
+
+    </main>
+</div>
+
+<script src="../js/pgAnime.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/trades.js"></script>
+</body>
+</html>

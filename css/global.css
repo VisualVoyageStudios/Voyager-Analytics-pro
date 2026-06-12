@@ -1,0 +1,278 @@
+:root {
+    --bg: #070b14;
+    --card: #101827;
+
+    --sidebar:#111827;
+    --border:#334155;
+
+    --text:#f8fafc;
+    --muted:#94a3b8;
+
+    --primary:#3b82f6;
+
+    --success:#22c55e;
+    --danger:#ef4444;
+
+
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+body{
+ background:
+ radial-gradient(circle at top left,
+ rgba(0,212,255,.08),
+ transparent 40%),
+
+ radial-gradient(circle at bottom right,
+ rgba(123,97,255,.08),
+ transparent 40%),
+
+ #070b14;
+}
+
+body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:Inter,sans-serif;
+    min-height:100vh;
+}
+
+.navbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 5%;
+}
+
+.nav-links{
+    display:flex;
+    gap:25px;
+    list-style:none;
+}
+
+.nav-links a{
+    color:white;
+    text-decoration:none;
+}
+
+/* sidebar styles */
+.sidebar{
+    width:260px;
+    background: var(--sidebar);
+    padding:30px 20px;
+    border-right:1px solid var(--border);
+}
+
+.logo{
+    font-size:1.4rem;
+    font-weight:700;
+    margin-bottom:50px;
+}
+
+.sidebar nav{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.sidebar a{
+    color: var(--muted);
+    text-decoration:none;
+    padding:12px;
+    border-radius:10px;
+    transition:.3s;
+}
+
+.sidebar a:hover,
+.sidebar a.active{
+    background: rgba(59, 130, 246, .15);
+    color:white;
+}
+/** */
+
+.hero{
+    min-height:90vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+}
+
+.hero h1{
+    font-size:4rem;
+    margin-bottom:20px;
+}
+
+.hero p{
+    max-width:700px;
+    margin:auto;
+    color:var(--muted);
+}
+
+.hero-buttons{
+    margin-top:30px;
+    display:flex;
+    justify-content:center;
+    gap:15px;
+}
+
+.btn-primary{
+    background:var(--primary);
+    color:black;
+    padding:14px 24px;
+    border-radius:10px;
+    text-decoration:none;
+    font-weight:600;
+}
+
+.btn-secondary{
+    border:1px solid white;
+    color:white;
+    padding:14px 24px;
+    border-radius:10px;
+    text-decoration:none;
+}
+
+/* ── Hamburger button (hidden on desktop) ── */
+.hamburger {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* ── Sidebar overlay (mobile) ── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 998;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* ── Mobile breakpoint ── */
+@media (max-width: 768px) {
+
+    .hamburger {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Sidebar slides off-screen by default */
+    .sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        height: 100vh;
+        z-index: 999;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    /* Main content fills full width */
+    .main-content {
+        width: 100%;
+        padding: 20px 16px;
+    }
+
+    /* Topbar */
+    .topbar {
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    /* All grids stack to single column */
+    .dashboard-grid,
+    .kpi-grid,
+    .bottom-grid,
+    .features-grid,
+    .steps-grid {
+        grid-template-columns: 1fr !important;
+        flex-direction: column;
+    }
+
+    /* Tables scroll horizontally */
+    .table-card {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: 500px;
+    }
+
+    /* Filters stack */
+    .filters {
+        flex-direction: column;
+    }
+
+    .filters input,
+    .filters select {
+        width: 100%;
+    }
+
+    /* Page header stacks */
+    .page-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    /* Stats bar on landing stacks */
+    .stats-bar {
+        flex-direction: column;
+        gap: 20px;
+        padding: 24px;
+    }
+
+    .stat-divider {
+        width: 40px;
+        height: 1px;
+    }
+
+    /* Hero adjustments */
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Navbar */
+    .nav-links {
+        display: none;
+    }
+
+    /* Journal form full width */
+    .journal-form form {
+        max-width: 100%;
+    }
+
+    /* Settings form full width */
+    #changePasswordForm {
+        max-width: 100% !important;
+    }
+
+    /* Drawer full width */
+    .drawer {
+        width: 100%;
+        right: -100%;
+    }
+}

@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Voyager Analytics Dashboard</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+
+</head>
+
+<body>
+<!--Page loader-->
+<div class="dashboard-container">
+    <aside class="sidebar">
+
+        <div class="logo">
+            <i class="fas fa-rocket skeleton">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+
+        <nav>
+            <a href="dashboard.html">
+                <i class="fas fa-tachograph-digital">Dashboard</i>
+            </a>
+
+            <a href="accounts.html">
+                <i class="fas fa-briefcase">Accounts</i>
+            </a>
+
+            <a href="trades.html">
+                <i class="fas fa-chart-line">Trades</i>
+            </a>
+
+            <a href="analytics.html" class="active">
+                <i class="fas fa-eye">Analytics</i>
+            </a>
+
+            <a href="journal.html">
+                <i class="fas fa-book-open-reader">Journal</i>
+            </a>
+
+            <a href="settings.html">
+               <i class="fas fa-gears">Settings</i>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="page-header">
+
+            <h2>Analytics</h2>
+
+        </header>
+
+        <!-- Account Info-->
+        <section class="kpi-grid">
+
+            <div class="kpi-card skeleton">
+                <h4>Total Profit</h4>
+                <span id="totalProfit">$0</span>
+            </div>
+
+            <div class="kpi-card skeleton">
+                <h4>Win Rate</h4>
+                <span id="winRate">0%</span>
+            </div>
+
+            <div class="kpi-card skeleton">
+                <h4>Best Trade</h4>
+                <span id="bestTrade">$0</span>
+            </div>
+
+            <div class="kpi-card skeleton">
+                <h4>Worst Trade</h4>
+                <span id="worstTrade">$0</span>
+            </div>
+        </section>
+        
+            <h3 class="h3"> Personal Review</h3>
+
+        <section class="kpi-grid skeleton">
+            <!--bottom row-->
+            <div class="metric-card">
+                <h3>Profit Factor</h3>
+                <span id="profitFactor">0%</span>
+            </div>
+
+            <div class="metric-card skeleton">
+                <h3>Average Win</h3>
+                <span id="averageWin">$0</span>
+            </div>
+
+            <div class="metric-card skeleton">
+                <h3>Average Loss</h3>
+                <span id="averageLoss">$0</span>
+            </div>
+
+            <div class="metric-card skeleton">
+                <h3>Expectancy (long term overview)</h3>
+                <span id="expectancy">$0</span>
+                <tooltip>
+                    <p> </p>
+                </tooltip>
+            </div>
+        </section>
+
+        <section class="bottom-grid">
+            <!-- Average trade and drawdown-->
+            <div class="metric-card skeleton">
+                <h3>Average Profit /open trade</h3>
+                <span id="averageTrade">$0</span>
+            </div>
+
+            <div class="metric-card skeleton">
+                <h3>Max Drawdown</h3>
+                <span id="maxDrawdown">$0</span>
+            </div>
+        </section>
+
+
+        <!-- Calendar heatmap -->
+         <!--calendar nav-->
+        <div class="chart-container">
+            <div id="monthlySummary" class="summary-card skeleton">
+
+                <h3>Monthly Summary</h3>
+
+                <p id="monthProfit">$0</p>
+
+                <p id="monthTrades">0</p>
+
+                <p id="monthDays">0</p>
+
+                <p id="monthWinRate">0%</p>
+
+            </div>
+        </div>
+        
+        <div>
+            <h3>Trading Heatmap</h3>
+            <div class="calendar-header">
+                <button id="prevMonth">
+                    ←
+                </button>
+
+                <h3 id="monthTitle"></h3>
+
+                <button id="nextMonth">
+                    →
+                </button>
+            </div>
+            <!-- Calendar heatmap -->
+                <div class="calendar-wrapper">
+                <div id="heatmap" class="skeleton"></div>            
+                </div>
+
+            <!--Daily view (click date)-->
+            <div id="dayModal" class="day-modal-overlay">
+                <div class="day-modal-content">
+                    <div class="day-modal-header">
+                        <h3 id="modalDate"></h3>
+                        <button id="closeModal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="modalTrades"></div>
+                </div>
+            </div>
+        </div>
+    FIXME:ARRANGE THE TABLE ORDER FROM RECENT TO OLDEST
+        <!--monthly Review-->
+        <table id="monthlyTable">
+        <thead>
+                <tr>
+
+                    <th>Month</th>
+
+                    <th>Profit</th>
+
+                    <th>Trades</th>
+
+                    <th>Win Rate</th>
+
+                </tr>
+            </thead>
+            <tbody class="skeleton"></tbody>
+        </table>
+        
+    
+    
+    
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/analytics.js"></script>
+<script src="../js/pgAnime.js"></script>
+
+</body>
+</html>

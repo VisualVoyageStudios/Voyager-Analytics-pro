@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | Voyager Analytics</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader">
+    <div class="spinner"></div>
+</div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+
+        <nav>
+            <a href="dashboard.html">
+                <i class="fas fa-tachograph-digital">Dashboard</i>
+            </a>
+            <a href="accounts.html">
+                <i class="fas fa-briefcase">Accounts</i>
+            </a>
+            <a href="trades.html">
+                <i class="fas fa-chart-line">Trades</i>
+            </a>
+            <a href="analytics.html">
+                <i class="fas fa-eye">Analytics</i>
+            </a>
+            <a href="journal.html">
+                <i class="fas fa-book-open-reader">Journal</i>
+            </a>
+            <a href="settings.html" class="active">
+                <i class="fas fa-gears">Settings</i>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+FIXME: ADD MORE RELEVANT SETTINGS
+        <header class="page-header">
+            <h2>Settings</h2>
+        </header>
+
+        <!-- Profile -->
+        <div class="metric-card" style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 16px; font-size: 16px; opacity: 1;">Profile</h3>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="
+                    width: 60px; height: 60px;
+                    border-radius: 50%;
+                    background: var(--primary);
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 24px; font-weight: 700;
+                " id="avatarInitial">?</div>
+                <div>
+                    <p id="profileEmail" style="font-size: 16px; font-weight: 600;">—</p>
+                    <p style="color: var(--muted); font-size: 13px; margin-top: 4px;">Voyager Account</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="metric-card" style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 16px; font-size: 16px; opacity: 1;">Change Password</h3>
+            <form id="changePasswordForm" style="display: flex; flex-direction: column; gap: 12px; max-width: 400px;">
+                <input
+                    type="password"
+                    id="newPassword"
+                    placeholder="New password"
+                    style="padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: white;"
+                >
+                <input
+                    type="password"
+                    id="confirmNewPassword"
+                    placeholder="Confirm new password"
+                    style="padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: white;"
+                >
+                <button type="submit" class="btn-primary" style="width: fit-content; padding: 12px 24px; border: none; cursor: pointer; border-radius: 10px;">
+                    Update Password
+                </button>
+            </form>
+            <p id="passwordMsg" style="margin-top: 10px; font-size: 13px;"></p>
+        </div>
+
+        <!-- MT5 Sync -->
+        <div class="metric-card" style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 6px; font-size: 16px; opacity: 1;">Sync Trades</h3>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">
+                Import your full MT5 trade history into Voyager in two steps.
+            </p>
+
+            <!-- Agent Status -->
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <div id="agentDot" style="width:10px; height:10px; border-radius:50%; background: var(--danger);"></div>
+                <p id="agentStatus" style="font-size: 13px; color: var(--muted);">Sync Agent not running</p>
+            </div>
+
+            <!-- Step 1 -->
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                <p style="font-weight: 600; margin-bottom: 8px;">Step 1 — Download & run the Sync Agent</p>
+                <p style="font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 14px;">
+                    Click the button below to download the Sync Agent. Once downloaded,
+                    double-click the file to run it. A small window will open —
+                    keep it running in the background. You only need to do this once.
+                </p>
+                <button id="downloadAgentBtn" style="
+                    background: var(--card);
+                    border: 1px solid var(--border);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-size: 14px;
+                ">
+                    <i class="fas fa-download" style="margin-right: 8px;"></i>
+                    Download Voyager Sync Agent
+                </button>
+            </div>
+
+            <!-- Step 2 -->
+            <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <p style="font-weight: 600; margin-bottom: 6px;">Step 2 — Open MetaTrader 5</p>
+                <p style="font-size: 13px; color: var(--muted); line-height: 1.7;">
+                    Make sure <strong style="color: rgb(78, 143, 218); border-color: var(--border);">MetaTrader 5</strong> is open
+                    and logged into your trading account before syncing.
+                </p>
+            </div>
+
+            <!-- Sync Button -->
+            <button id="syncNowBtn" class="btn-primary" style="
+                padding: 14px 28px;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 15px;
+                font-weight: 600;
+                width: 100%;
+            ">
+                <i class="fas fa-rotate" style="margin-right: 8px;"></i>
+                Sync Now
+            </button>
+
+            <p id="syncMsg" style="margin-top: 12px; font-size: 13px; text-align: center;"></p>
+        </div>
+
+        <!-- Data Management -->
+        <div class="metric-card" style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 12px; font-size: 16px; opacity: 1;">Data</h3>
+            <p style="color: var(--muted); font-size: 14px; margin-bottom: 16px;">
+                Permanently delete all your trades and journal entries. This cannot be undone.
+            </p>
+            <button id="clearDataBtn" class="delete-btn">
+                <i class="fas fa-trash" style="margin-right: 6px;"></i>
+                Clear All Trade Data
+            </button>
+            <p id="clearMsg" style="margin-top: 10px; font-size: 13px;"></p>
+        </div>
+
+        <!-- About -->
+        <div class="metric-card">
+            <h3 style="margin-bottom: 12px; font-size: 16px; opacity: 1;">About</h3>
+            <p style="color: var(--muted); font-size: 14px; line-height: 1.8;">
+                Voyager Analytics — Trading Performance Tracker<br>
+                Built For Traders<br>
+                Version 1.0.0<br>
+            </p>
+        </div>
+
+    </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/pgAnime.js"></script>
+</body>
+</html>
