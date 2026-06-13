@@ -51,7 +51,14 @@ async function callAI(prompt){
     const data = await res.json();
     return data.text;
 }
+// Global error tracker
+window.addEventListener("error", (e) => {
+    console.error("Global error:", e.message, "at", e.filename, "line", e.lineno);
+});
 
+window.addEventListener("unhandledrejection", (e) => {
+    console.error("Unhandled promise rejection:", e.reason);
+});
 
 // ── Fetch economic data ──────────────────────────────────────────────
 
