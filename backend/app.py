@@ -1294,11 +1294,13 @@ def delete_account(
 @app.get("/fundamentals")
 async def get_fundamentals(current_user=Depends(get_current_user)):
 
-    countries = {
-        "USD": "US", "EUR": "XC", "GBP": "GB",
-        "JPY": "JP", "AUD": "AU", "CAD": "CA",
-        "NZD": "NZ", "CHF": "CH", "CNY": "CN"
+    country_map = {
+        "US": "USD", "XC": "EUR", "GB": "GBP",
+        "JP": "JPY", "AU": "AUD", "CA": "CAD",
+        "NZ": "NZD", "CH": "CHF", "CN": "CNY"
     }
+
+    country_codes = ";".join(country_map.keys())
 
     indicators = {
         "gdp_growth":   "NY.GDP.MKTP.KD.ZG",
@@ -1306,36 +1308,32 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
         "unemployment": "SL.UEM.TOTL.ZS"
     }
 
-    results = {}
+    results = {code: {"code": code} for code in country_map.values()}
 
     async with httpx.AsyncClient() as client:
-        for code, country in countries.items():
-            results[code] = {"code": code}
+        for metric, indicator in indicators.items():
+            try:
+                res = await client.get(
+                    f"https://api.worldbank.org/v2/country/{country_codes}/indicator/{indicator}",
+                    params={
+                        "format": "json",
+                        "mrv": 1,
+                        "per_page": 20
+                    },
+                    timeout=15.0
+                )
+                data = res.json()
 
-            for metric, indicator in indicators.items():
-                try:
-                    res = await client.get(
-                        f"https://api.worldbank.org/v2/country/{country}/indicator/{indicator}",
-                        params={
-                            "format": "json",
-                            "mrv": 1,
-                            "per_page": 1
-                        },
-                        timeout=10.0
-                    )
-                    data = res.json()
+                if isinstance(data, list) and len(data) > 1 and data[1]:
+                    for entry in data[1]:
+                        country_id = entry["country"]["id"]
+                        currency   = country_map.get(country_id)
+                        value      = entry["value"]
 
-                    if (
-                        isinstance(data, list) and
-                        len(data) > 1 and
-                        data[1] and
-                        data[1][0]["value"] is not None
-                    ):
-                        results[code][metric] = round(data[1][0]["value"], 2)
-                    else:
-                        results[code][metric] = None
+                        if currency and value is not None:
+                            results[currency][metric] = round(value, 2)
 
-                except Exception:
-                    results[code][metric] = None
+            except Exception as e:
+                print(f"World Bank fetch failed for {metric}: {str(e)}")
 
     return list(results.values())
