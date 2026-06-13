@@ -1231,14 +1231,13 @@ async def ai_insight(
 
     async with httpx.AsyncClient() as client:
         res = await client.post(
-            "https://api.anthropic.com/v1/messages",
+            "https://api.groq.com/openai/v1/chat/completions",
             headers={
-                "x-api-key": os.getenv("ANTHROPIC_API_KEY"),
-                "anthropic-version": "2023-06-01",
+                "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "claude-sonnet-4-6",
+                "model": "llama3-8b-8192",
                 "max_tokens": 4000,
                 "messages": [{"role": "user", "content": prompt}]
             },
@@ -1246,5 +1245,5 @@ async def ai_insight(
         )
 
     data = res.json()
-    text = "".join(b.get("text", "") for b in data.get("content", []))
+    text = data["choices"][0]["message"]["content"]
     return {"text": text}
