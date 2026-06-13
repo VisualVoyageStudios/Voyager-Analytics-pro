@@ -83,10 +83,13 @@ Rules:
     try {
         const res = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "anthropic-dangerous-direct-browser-access": "true"
+            },
             body: JSON.stringify({
                 model: "claude-sonnet-4-6",
-                max_tokens: 1000,
+                max_tokens: 5000,
                 messages: [{ role: "user", content: prompt }]
             })
         });
@@ -387,10 +390,13 @@ async function generateAIInsight() {
     try {
         const res = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "anthropic-dangerous-direct-browser-access": "true"
+            },
             body: JSON.stringify({
                 model: "claude-sonnet-4-6",
-                max_tokens: 1000,
+                max_tokens: 5000,
                 messages: [{ role: "user", content: prompt }]
             })
         });
