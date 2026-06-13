@@ -1,575 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voyager - Edge Finder</title>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<link rel="stylesheet" href="../css/global.css">
-<link rel="stylesheet" href="../css/dashboard.css">
-<link rel="stylesheet" href="../css/pgAnime.css">
-
-<style>
-  /* ── Edge Finder scoped styles ── */
-  :root {
-    --ef-bg: #0d0d0f;
-    --ef-card: #141418;
-    --ef-border: #222228;
-    --ef-accent: #3b82f6;
-    --ef-bull: #22c55e;
-    --ef-bear: #ef4444;
-    --ef-neutral: #a3a3b3;
-    --ef-gold: #f59e0b;
-    --ef-text: #e2e2f0;
-    --ef-sub: #6b6b80;
-    --ef-row-hover: #1a1a22;
-  }
-
-  .ef-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-    padding: 0 0 40px 0;
-  }
-
-  /* ── Top controls bar ── */
-  .ef-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .ef-controls select,
-  .ef-controls button {
-    background: var(--ef-card);
-    border: 1px solid var(--ef-border);
-    color: var(--ef-text);
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    outline: none;
-  }
-
-  .ef-controls select:hover,
-  .ef-controls button:hover {
-    border-color: var(--ef-accent);
-  }
-
-  .ef-controls button.active,
-  .ef-controls button:focus {
-    border-color: var(--ef-accent);
-    color: var(--ef-accent);
-  }
-
-  .ef-refresh-btn {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--ef-accent) !important;
-    border-color: var(--ef-accent) !important;
-    color: #fff !important;
-    font-weight: 600;
-  }
-
-  .ef-refresh-btn:hover {
-    opacity: 0.85;
-  }
-
-  .ef-refresh-btn.loading i {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .ef-last-updated {
-    font-size: 0.75rem;
-    color: var(--ef-sub);
-    margin-left: 8px;
-    white-space: nowrap;
-  }
-
-  /* ── Summary score cards ── */
-  .ef-score-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
-  }
-
-  .ef-score-card {
-    background: var(--ef-card);
-    border: 1px solid var(--ef-border);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    cursor: pointer;
-    transition: border-color 0.2s, transform 0.15s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .ef-score-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    border-radius: 12px 12px 0 0;
-    background: var(--card-accent, var(--ef-neutral));
-  }
-
-  .ef-score-card:hover {
-    border-color: var(--ef-accent);
-    transform: translateY(-2px);
-  }
-
-  .ef-score-card .flag {
-    font-size: 1.4rem;
-    line-height: 1;
-  }
-
-  .ef-score-card .country-name {
-    font-size: 0.78rem;
-    color: var(--ef-sub);
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .ef-score-card .score-value {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--ef-text);
-    line-height: 1;
-  }
-
-  .ef-score-card .score-label {
-    font-size: 0.72rem;
-    color: var(--ef-sub);
-  }
-
-  .ef-score-card .bias-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    width: fit-content;
-    margin-top: 4px;
-  }
-
-  .bias-bullish { background: rgba(34,197,94,0.12); color: var(--ef-bull); }
-  .bias-bearish { background: rgba(239,68,68,0.12); color: var(--ef-bear); }
-  .bias-neutral { background: rgba(163,163,179,0.12); color: var(--ef-neutral); }
-
-  /* ── Main ranking table ── */
-  .ef-table-section {
-    background: var(--ef-card);
-    border: 1px solid var(--ef-border);
-    border-radius: 14px;
-    overflow: hidden;
-  }
-
-  .ef-table-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--ef-border);
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .ef-table-header h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--ef-text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
-  }
-
-  .ef-table-header h3 i {
-    color: var(--ef-accent);
-    font-size: 0.9rem;
-  }
-
-  .ef-legend {
-    display: flex;
-    gap: 16px;
-    font-size: 0.75rem;
-    color: var(--ef-sub);
-    align-items: center;
-  }
-
-  .ef-legend span {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-
-  .dot-bull { background: var(--ef-bull); }
-  .dot-bear { background: var(--ef-bear); }
-  .dot-neu  { background: var(--ef-neutral); }
-
-  .ef-table-wrap {
-    overflow-x: auto;
-  }
-
-  table.ef-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-  }
-
-  table.ef-table thead tr {
-    background: #111116;
-  }
-
-  table.ef-table th {
-    padding: 12px 18px;
-    text-align: left;
-    color: var(--ef-sub);
-    font-weight: 600;
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    border-bottom: 1px solid var(--ef-border);
-  }
-
-  table.ef-table th.sortable {
-    cursor: pointer;
-    user-select: none;
-  }
-
-  table.ef-table th.sortable:hover {
-    color: var(--ef-text);
-  }
-
-  table.ef-table tbody tr {
-    border-bottom: 1px solid var(--ef-border);
-    transition: background 0.15s;
-    cursor: pointer;
-  }
-
-  table.ef-table tbody tr:last-child {
-    border-bottom: none;
-  }
-
-  table.ef-table tbody tr:hover {
-    background: var(--ef-row-hover);
-  }
-
-  table.ef-table td {
-    padding: 14px 18px;
-    color: var(--ef-text);
-    vertical-align: middle;
-    white-space: nowrap;
-  }
-
-  .rank-num {
-    font-weight: 700;
-    color: var(--ef-sub);
-    font-size: 0.8rem;
-    width: 32px;
-  }
-
-  .rank-1 { color: var(--ef-gold); }
-  .rank-2 { color: #94a3b8; }
-  .rank-3 { color: #cd7f32; }
-
-  .country-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .country-cell .flag-sm { font-size: 1.2rem; }
-  .country-cell .cname  { font-weight: 600; }
-  .country-cell .ccode  { color: var(--ef-sub); font-size: 0.75rem; }
-
-  .score-bar-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 140px;
-  }
-
-  .score-bar {
-    height: 6px;
-    border-radius: 4px;
-    background: var(--ef-border);
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .score-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.6s ease;
-  }
-
-  .fill-bull { background: var(--ef-bull); }
-  .fill-bear { background: var(--ef-bear); }
-  .fill-neu  { background: var(--ef-neutral); }
-
-  .score-num {
-    font-weight: 700;
-    min-width: 36px;
-    text-align: right;
-    font-size: 0.9rem;
-  }
-
-  .metric-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 600;
-  }
-
-  .pill-up   { background: rgba(34,197,94,0.1);  color: var(--ef-bull); }
-  .pill-down { background: rgba(239,68,68,0.1);   color: var(--ef-bear); }
-  .pill-flat { background: rgba(163,163,179,0.1); color: var(--ef-neutral); }
-
-  .trend-arrow { font-size: 0.75rem; }
-
-  /* ── Pair implications panel ── */
-  .ef-pairs-section {
-    background: var(--ef-card);
-    border: 1px solid var(--ef-border);
-    border-radius: 14px;
-    overflow: hidden;
-  }
-
-  .ef-pairs-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--ef-border);
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .ef-pairs-header h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--ef-text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
-  }
-
-  .ef-pairs-header h3 i { color: var(--ef-gold); font-size: 0.9rem; }
-
-  .ef-pairs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 0;
-  }
-
-  .ef-pair-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--ef-border);
-    border-right: 1px solid var(--ef-border);
-    transition: background 0.15s;
-  }
-
-  .ef-pair-row:hover { background: var(--ef-row-hover); }
-
-  .pair-symbol {
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 0.04em;
-    color: var(--ef-text);
-  }
-
-  .pair-diff {
-    font-size: 0.75rem;
-    color: var(--ef-sub);
-    margin-top: 2px;
-  }
-
-  /* ── AI Insight box ── */
-  .ef-insight-box {
-    background: linear-gradient(135deg, #0f1623 0%, #141418 100%);
-    border: 1px solid #1e3a5f;
-    border-radius: 14px;
-    padding: 22px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .ef-insight-box::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--ef-accent), #8b5cf6);
-  }
-
-  .ef-insight-box h3 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ef-accent);
-    margin: 0 0 12px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .ef-insight-text {
-    font-size: 0.9rem;
-    color: var(--ef-text);
-    line-height: 1.7;
-    min-height: 48px;
-  }
-
-  .ef-insight-text.loading-pulse {
-    color: var(--ef-sub);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  /* ── Methodology footer ── */
-  .ef-method {
-    background: var(--ef-card);
-    border: 1px solid var(--ef-border);
-    border-radius: 14px;
-    padding: 20px 22px;
-  }
-
-  .ef-method summary {
-    font-size: 0.82rem;
-    color: var(--ef-sub);
-    cursor: pointer;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    list-style: none;
-    outline: none;
-    user-select: none;
-  }
-
-  .ef-method summary i { color: var(--ef-accent); }
-  .ef-method[open] summary { color: var(--ef-text); margin-bottom: 14px; }
-
-  .ef-method-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
-    margin-top: 4px;
-  }
-
-  .ef-method-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .ef-method-item strong {
-    font-size: 0.8rem;
-    color: var(--ef-text);
-  }
-
-  .ef-method-item p {
-    font-size: 0.75rem;
-    color: var(--ef-sub);
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  /* ── Empty / error states ── */
-  .ef-empty {
-    text-align: center;
-    padding: 40px;
-    color: var(--ef-sub);
-    font-size: 0.85rem;
-  }
-
-  .ef-empty i { display: block; font-size: 2rem; margin-bottom: 10px; opacity: 0.3; }
-
-  /* ── Responsive ── */
-  @media (max-width: 700px) {
-    .ef-score-grid { grid-template-columns: repeat(2, 1fr); }
-    .ef-pairs-grid { grid-template-columns: 1fr; }
-    .ef-method-grid { grid-template-columns: 1fr 1fr; }
-  }
-</style>
-</head>
-
-<body>
-<div class="dashboard-container">
-  <aside class="sidebar">
-    <div class="logo">
-      <i class="fas fa-rocket skeleton">Voyager</i>
-      <p>ANALYTICS</p>
-    </div>
-    <nav>
-        <a href="dashboard.html">
-            <i class="fas fa-tachograph-digital"></i> Dashboard
-        </a>
-        <a href="accounts.html">
-            <i class="fas fa-briefcase"></i> Accounts
-        </a>
-        <a href="trades.html">
-            <i class="fas fa-chart-line"></i> Trades
-        </a>
-        <a href="analytics.html">
-            <i class="fas fa-eye"></i> Analytics
-        </a>
-        <a href="journal.html">
-            <i class="fas fa-book-open-reader"></i> Journal
-        </a>
-    
-        <!-- Divider -->
-        <div class="nav-divider">
-            <span>Market Tools</span>
-        </div>
-    
-        <a href="economicHeatmap.html">
-            <i class="fas fa-globe"></i> Economic Heatmap
-        </a>
-        <a href="edgeFinder.html">
-            <i class="fas fa-crosshairs"></i> Edge Finder
-        </a>
-    
-        <!-- Divider -->
-        <div class="nav-divider">
-            <span>Account</span>
-        </div>
-    
-        <a href="settings.html">
-            <i class="fas fa-gears"></i> Settings
-        </a>
-    </nav>
+a/a>
+
+      <!-- Divider -->
+      <div class="nav-divider">
+          <span>Account</span>
+      </div>
+
+      <a href="settings.html">
+          <i class="fas fa-gears"></i> Settings
+      </a>
+  </nav>
   </aside>
 
   <main class="main-content">
@@ -694,6 +133,8 @@
 <script src="../js/api.js"></script>
 <script src="../js/pgAnime.js"></script>
 <script>
+const token = localStorage.getItem("token");
+if(!token){ window.location.href = "../login.html"; }
 
 // Countries tracked — forex, commodities & indices coverage
 const COUNTRIES = [
@@ -762,29 +203,26 @@ overall_score is a weighted composite (rate 25%, cpi 20%, gdp 20%, employment 20
 For XAU (Gold): invert — safe-haven flows score positive when USD bearish or risk-off.
 Respond with ONLY the JSON array.`;
 
-  try {
-    const res = await fetch(GROK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${GROK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: GROK_MODEL,
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }],
-      }),
+try {
+    const res = await fetch(`${API_URL}/ai/insight`, {
+        method: "POST",
+        headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt })
     });
-
     const json = await res.json();
-    let raw = json.choices?.[0]?.message?.content || "[]";
-    raw = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(raw);
+    const raw  = json.text || "";
+
+    // Parse the JSON array from the AI response
+    const clean  = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
 
     // Merge with COUNTRIES metadata
     allData = COUNTRIES.map(c => {
-      const d = parsed.find(p => p.code === c.code) || {};
-      return { ...c, ...d };
+        const d = parsed.find(p => p.code === c.code) || {};
+        return { ...c, ...d };
     }).filter(c => c.overall_score !== undefined);
 
     renderScoreCards();
@@ -793,16 +231,16 @@ Respond with ONLY the JSON array.`;
     generateInsight();
 
     document.getElementById("ef-last-updated").textContent =
-      "Updated " + new Date().toLocaleTimeString();
+        "Updated " + new Date().toLocaleTimeString();
 
-  } catch(err) {
+} catch(err) {
     console.error(err);
     setInsight("⚠ Could not fetch data. Check your connection and try again.", false);
     document.getElementById("ef-table-body").innerHTML =
-      `<tr><td colspan="10" class="ef-empty"><i class="fas fa-triangle-exclamation"></i>Failed to load — click Refresh to retry.</td></tr>`;
-  }
+        `<tr><td colspan="10" class="ef-empty"><i class="fas fa-triangle-exclamation"></i>Failed to load — click Refresh to retry.</td></tr>`;
+}
 
-  btn.classList.remove("loading");
+btn.classList.remove("loading");
 }
 
 // ── AI narrative insight ────────────────────────────────
@@ -822,21 +260,17 @@ Write 2-3 sharp, professional sentences on the current macro environment and top
 Focus on actionable insight. No fluff. Do NOT use asterisks or bullet points.`;
 
   try {
-    const res = await fetch(GROK_URL, {
+    const res = await fetch(`${API_URL}/ai/insight`, {
       method: "POST",
       headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${GROK_API_KEY}`,
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({
-        model: GROK_MODEL,
-        max_tokens: 200,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const json = await res.json();
-    const text = json.choices?.[0]?.message?.content || "No insight available.";
-    setInsight(text, false);
+      body: JSON.stringify({ prompt })
+  });
+  const json = await res.json();
+  const text = json.text || "No insight available.";
+  setInsight(text, false);
   } catch {
     setInsight("Insight generation unavailable.", false);
   }
