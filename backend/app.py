@@ -1289,3 +1289,53 @@ def delete_account(
     db.commit()
 
     return {"message": "Account deleted"}
+
+##world bank api
+@app.get("/fundamentals")
+async def get_fundamentals(current_user=Depends(get_current_user)):
+
+    countries = {
+        "USD": "US", "EUR": "XC", "GBP": "GB",
+        "JPY": "JP", "AUD": "AU", "CAD": "CA",
+        "NZD": "NZ", "CHF": "CH", "CNY": "CN"
+    }
+
+    indicators = {
+        "gdp_growth":   "NY.GDP.MKTP.KD.ZG",
+        "inflation":    "FP.CPI.TOTL.ZG",
+        "unemployment": "SL.UEM.TOTL.ZS"
+    }
+
+    results = {}
+
+    async with httpx.AsyncClient() as client:
+        for code, country in countries.items():
+            results[code] = {"code": code}
+
+            for metric, indicator in indicators.items():
+                try:
+                    res = await client.get(
+                        f"https://api.worldbank.org/v2/country/{country}/indicator/{indicator}",
+                        params={
+                            "format": "json",
+                            "mrv": 1,
+                            "per_page": 1
+                        },
+                        timeout=10.0
+                    )
+                    data = res.json()
+
+                    if (
+                        isinstance(data, list) and
+                        len(data) > 1 and
+                        data[1] and
+                        data[1][0]["value"] is not None
+                    ):
+                        results[code][metric] = round(data[1][0]["value"], 2)
+                    else:
+                        results[code][metric] = None
+
+                except Exception:
+                    results[code][metric] = None
+
+    return list(results.values())
