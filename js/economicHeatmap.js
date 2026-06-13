@@ -50,22 +50,63 @@ let activeFilters   = { impact: "all", country: "all", surprise: "all" };
 // ── Single shared AI caller ──────────────────────────────────────────
 
 async function callAI(prompt){
-    console.log("Calling AI endpoint:", `${API_URL}/ai/insight`);
-    const res = await fetch(`${API_URL}/ai/insight`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ prompt })
-    });
-    console.log("AI response status:", res.status);
-    const data = await res.json();
-    console.log("AI response data:", JSON.stringify(data).slice(0, 200));
-    if(!data.text){
-        throw new Error("No text in response: " + JSON.stringify(data));
+    const endpoint = `${API_URL}/ai/insight`;
+    console.log("[callAI] POST →", endpoint);
+
+    let res;
+    try {
+        res = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ prompt })
+        });
+    } catch (networkErr) {
+        console.error("[callAI] Network/fetch error:", networkErr);
+        throw new Error("Network error: " + networkErr.message);
     }
-    return data.text;
+
+    console.log("[callAI] HTTP status:", res.status, res.statusText);
+
+    // Read body as text first so we can log it even if it's not JSON
+    const rawBody = await res.text();
+    console.log("[callAI] Raw response body:", rawBody.slice(0, 500));
+
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${rawBody.slice(0, 200)}`);
+    }
+
+    let data;
+    try {
+        data = JSON.parse(rawBody);
+    } catch (parseErr) {
+        console.error("[callAI] JSON parse failed:", parseErr);
+        throw new Error("Response is not valid JSON: " + rawBody.slice(0, 200));
+    }
+
+    console.log("[callAI] Parsed keys:", Object.keys(data));
+
+    // Support multiple possible response shapes from the backend
+    // Check common field names: text, result, content, message, response, output
+    const text =
+        data.text      ??
+        data.result    ??
+        data.content   ??
+        data.message   ??
+        data.response  ??
+        data.output    ??
+        // Anthropic SDK passthrough shape: data.content[0].text
+        data?.content?.[0]?.text ??
+        null;
+
+    if (text === null) {
+        console.error("[callAI] Could not find text in response. Full data:", JSON.stringify(data));
+        throw new Error("No text field found. Keys were: " + Object.keys(data).join(", "));
+    }
+
+    return text;
 }
 
 
