@@ -1250,3 +1250,42 @@ async def ai_insight(
     except Exception as e:
         print(f"AI insight error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+##-- deleteaccount info
+@app.delete("/auth/delete-account")
+def delete_account(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = current_user["user_id"]
+
+    # Delete all journals
+    db.query(Journal).filter(
+        Journal.user_id == user_id
+    ).delete(synchronize_session=False)
+
+    # Delete all trades via accounts
+    account_ids = [
+        a.id for a in
+        db.query(Account).filter(
+            Account.user_id == user_id
+        ).all()
+    ]
+
+    db.query(Trade).filter(
+        Trade.account_id.in_(account_ids)
+    ).delete(synchronize_session=False)
+
+    # Delete accounts
+    db.query(Account).filter(
+        Account.user_id == user_id
+    ).delete(synchronize_session=False)
+
+    # Delete user
+    db.query(User).filter(
+        User.id == user_id
+    ).delete(synchronize_session=False)
+
+    db.commit()
+
+    return {"message": "Account deleted"}
