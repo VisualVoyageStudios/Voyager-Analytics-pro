@@ -1,5 +1,6 @@
 import os
 import uuid
+import httpx
 from uuid import uuid4
 from datetime import datetime, timedelta
 
@@ -1216,10 +1217,7 @@ def get_me(
         "is_premium": user.is_premium
     }
 
-## AI INSIGHTS
-import httpx
-
-@app.post("/ai/insight")
+## AI INSIGHTS@app.post("/ai/insight")
 async def ai_insight(
     payload: dict,
     current_user=Depends(get_current_user)
@@ -1229,21 +1227,26 @@ async def ai_insight(
     if not prompt:
         raise HTTPException(status_code=400, detail="No prompt provided")
 
-    async with httpx.AsyncClient() as client:
-        res = await client.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "llama3-8b-8192",
-                "max_tokens": 4000,
-                "messages": [{"role": "user", "content": prompt}]
-            },
-            timeout=30.0
-        )
-
-    data = res.json()
-    text = data["choices"][0]["message"]["content"]
-    return {"text": text}
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama3-8b-8192",
+                    "max_tokens": 4000,
+                    "messages": [{"role": "user", "content": prompt}]
+                },
+                timeout=30.0
+            )
+        print(f"Groq status: {res.status_code}")
+        print(f"Groq response: {res.text[:500]}")
+        data = res.json()
+        text = data["choices"][0]["message"]["content"]
+        return {"text": text}
+    except Exception as e:
+        print(f"AI insight error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
