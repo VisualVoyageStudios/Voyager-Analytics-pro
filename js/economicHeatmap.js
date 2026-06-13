@@ -1,3 +1,13 @@
+// ── Global error tracker ─────────────────────────────────────────────
+window.addEventListener("error", (e) => {
+    console.error("Global error:", e.message, "at", e.filename, "line", e.lineno);
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+    console.error("Unhandled promise rejection:", e.reason);
+});
+
+// ── Auth check ───────────────────────────────────────────────────────
 const token = localStorage.getItem("token");
 
 if(!token){
@@ -40,6 +50,7 @@ let activeFilters   = { impact: "all", country: "all", surprise: "all" };
 // ── Single shared AI caller ──────────────────────────────────────────
 
 async function callAI(prompt){
+    console.log("Calling AI endpoint:", `${API_URL}/ai/insight`);
     const res = await fetch(`${API_URL}/ai/insight`, {
         method: "POST",
         headers: {
@@ -48,19 +59,15 @@ async function callAI(prompt){
         },
         body: JSON.stringify({ prompt })
     });
+    console.log("AI response status:", res.status);
     const data = await res.json();
+    console.log("AI response data:", JSON.stringify(data).slice(0, 200));
+    if(!data.text){
+        throw new Error("No text in response: " + JSON.stringify(data));
+    }
     return data.text;
-
-    // Global error tracker
-    window.addEventListener("error", (e) => {
-        console.error("Global error:", e.message, "at", e.filename, "line", e.lineno);
-    });
-    
-    window.addEventListener("unhandledrejection", (e) => {
-        console.error("Unhandled promise rejection:", e.reason);
-    });
-    
 }
+
 
 // ── Fetch economic data ──────────────────────────────────────────────
 
@@ -91,9 +98,10 @@ Rules:
 - Return ONLY the JSON array, nothing else`;
 
     try {
-        const raw    = await callAI(prompt);
-        const clean  = raw.replace(/```json|```/g, "").trim();
-        allEvents    = JSON.parse(clean);
+        const raw   = await callAI(prompt);
+        const clean = raw.replace(/```json|```/g, "").trim();
+        console.log("Parsed data preview:", clean.slice(0, 200));
+        allEvents   = JSON.parse(clean);
 
         populateCountryFilter();
         computeCountryScores();
@@ -356,10 +364,10 @@ async function generateAIInsight() {
         .map(([k, v]) => `${k}:${v > 0 ? "+" : ""}${v}`)
         .join(", ");
 
-    const prompt = `You are a senior FX macro analyst at a prop trading firm. Write a concise 3-sentence market insight (80–120 words) covering:
+    const prompt = `You are a senior FX macro analyst at a prop trading firm. Write a concise 3-sentence market insight (80-120 words) covering:
 1. Which currencies are showing the strongest fundamental divergence based on recent data
 2. Key risk events or data surprises driving sentiment
-3. One actionable bias or pair to watch (explain why, briefly)
+3. One actionable bias or pair to watch
 
 Recent economic data: ${topEvents}
 Country scores (higher = more bullish): ${scoresSummary}
@@ -368,9 +376,10 @@ Write in a professional but direct tone. No bullet points. No headers. Plain par
 
     try {
         const text = await callAI(prompt);
-        insightEl.innerHTML  = text;
-        insightEl.className  = "";
+        insightEl.innerHTML = text;
+        insightEl.className = "";
     } catch (err) {
+        console.error("AI insight failed:", err);
         insightEl.innerHTML = `<span style="color:var(--muted);">AI insight unavailable right now.</span>`;
     }
 }
