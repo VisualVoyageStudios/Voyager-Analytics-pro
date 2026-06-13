@@ -52,6 +52,7 @@ app = FastAPI()
 # CORS origin from .env(no uvicorn reload needed)
 CORS_ORIGINS = [
     "https://voyageranalytics.netlify.app",
+    "https://visualvoyagestudios.github.io/Voyager-Analytics-pro",
     "http://127.0.0.1:5500",
     "http://localhost:5500"
 ]
@@ -1214,3 +1215,36 @@ def get_me(
         "email": user.email,
         "is_premium": user.is_premium
     }
+
+## AI INSIGHTS
+import httpx
+
+@app.post("/ai/insight")
+async def ai_insight(
+    payload: dict,
+    current_user=Depends(get_current_user)
+):
+    prompt = payload.get("prompt", "")
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="No prompt provided")
+
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": os.getenv("ANTHROPIC_API_KEY"),
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 4000,
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=30.0
+        )
+
+    data = res.json()
+    text = "".join(b.get("text", "") for b in data.get("content", []))
+    return {"text": text}
