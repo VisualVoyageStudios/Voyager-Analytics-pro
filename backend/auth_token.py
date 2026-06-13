@@ -2,7 +2,7 @@ import os
 from jose import jwt
 from datetime import datetime, timedelta
 
-SECRET_KEY = os.getenv("SECRET_KEY", "voyager-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY", "voyager-analytics-pro-secret-key")
 
 ALGORITHM = "HS256"
 
