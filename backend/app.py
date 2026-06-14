@@ -1401,7 +1401,7 @@ async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
         except Exception as e:
             print(f"Crypto fetch error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
-## currency strength
+            
 ## Currency strength
 @app.get("/currency/strength")
 async def get_currency_strength(current_user=Depends(get_current_user)):
