@@ -694,10 +694,11 @@
 <script src="../js/api.js"></script>
 <script src="../js/pgAnime.js"></script>
 <script>
-
 const token = localStorage.getItem("token");
-if(!token){ window.location.href = "../login.html"; }
 
+if(!token){
+    window.location.href = "../login.html";
+}
 // Countries tracked — forex, commodities & indices coverage
 const COUNTRIES = [
   { code: "USD", name: "United States", flag: "🇺🇸", markets: ["forex","indices","commodities"] },
