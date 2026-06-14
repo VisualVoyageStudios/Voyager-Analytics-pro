@@ -1243,15 +1243,27 @@ async def ai_insight(
                 },
                 timeout=30.0
             )
+
         print(f"Groq status: {res.status_code}")
         print(f"Groq response: {res.text[:500]}")
+
         data = res.json()
+
+        if "choices" not in data:
+            print(f"Full Groq response: {data}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Groq error: {data.get('error', {}).get('message', str(data))}"
+            )
+
         text = data["choices"][0]["message"]["content"]
         return {"text": text}
+
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"AI insight error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 ##-- deleteaccount info
 @app.delete("/auth/delete-account")
 def delete_account(
