@@ -1401,3 +1401,47 @@ async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
         except Exception as e:
             print(f"Crypto fetch error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
+## currency strength
+@app.get("/currency/strength")
+async def get_currency_strength(current_user=Depends(get_current_user)):
+
+    base_currencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF"]
+    scores = {c: 0 for c in base_currencies}
+
+    async with httpx.AsyncClient() as client:
+        try:
+            for base in base_currencies:
+                res = await client.get(
+                    f"https://api.frankfurter.app/latest",
+                    params={"from": base},
+                    timeout=10.0
+                )
+                data = res.json()
+                rates = data.get("rates", {})
+
+                for target, rate in rates.items():
+                    if target in scores and target != base:
+                        if rate > 1:
+                            scores[base] += 1
+                        else:
+                            scores[base] -= 1
+
+        except Exception as e:
+            print(f"Currency strength error: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    max_score = max(abs(v) for v in scores.values()) or 1
+    normalized = {
+        k: round((v / max_score) * 100, 1)
+        for k, v in scores.items()
+    }
+
+    return [
+        {
+            "code":     code,
+            "score":    normalized[code],
+            "raw":      scores[code],
+            "trend":    "bullish" if normalized[code] > 10 else "bearish" if normalized[code] < -10 else "neutral"
+        }
+        for code in base_currencies
+    ]
