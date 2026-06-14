@@ -1355,7 +1355,7 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
 @app.get("/crypto/fundamentals")
 async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
 
-    coins = "bitcoin,ethereum,solana,ripple,binancecoin"
+    coins = "bitcoin,ethereum,solana,ripple"
 
     async with httpx.AsyncClient() as client:
         try:
@@ -1367,30 +1367,42 @@ async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
                     "order": "market_cap_desc",
                     "per_page": 10,
                     "page": 1,
-                    "sparkline": False,
+                    "sparkline": "false",
                     "price_change_percentage": "24h,7d"
                 },
-                timeout=30.0
+                headers={
+                    "accept": "application/json"
+                },
+                timeout=15.0
             )
+
+            print(f"CoinGecko status: {res.status_code}")
+            print(f"CoinGecko response preview: {res.text[:300]}")
+
             data = res.json()
+
+            if not isinstance(data, list):
+                print(f"Unexpected CoinGecko response: {data}")
+                raise HTTPException(status_code=500, detail=f"CoinGecko error: {str(data)}")
 
             return [
                 {
                     "code": coin["symbol"].upper(),
                     "name": coin["name"],
                     "price": coin["current_price"],
-                    "change_24h": coin.get("price_change_percentage_24h", 0),
-                    "change_7d": coin.get("price_change_percentage_7d_in_currency", 0),
+                    "change_24h": coin.get("price_change_percentage_24h") or 0,
+                    "change_7d": coin.get("price_change_percentage_7d_in_currency") or 0,
                     "market_cap": coin["market_cap"],
                     "volume_24h": coin["total_volume"],
                     "ath_distance": round(
                         ((coin["current_price"] - coin["ath"]) / coin["ath"]) * 100, 2
-                    )
+                    ) if coin.get("ath") else 0
                 }
                 for coin in data
             ]
 
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"Crypto fetch error: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-            
+            raise HTTPException(status_code=500, detail=str(e))            
