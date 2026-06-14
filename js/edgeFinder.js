@@ -3,6 +3,30 @@ const token = localStorage.token;
 if(!token){
     window.location.href = "../login.html";
 }
+
+// Cache to prevent data changing on every load
+const CACHE_KEY_DATA    = "voyager_heatmap_data";
+const CACHE_KEY_TIME    = "voyager_heatmap_time";
+const CACHE_EXPIRY_MS   = 60 * 60 * 1000; // 1 hour
+
+async function getCachedOrFetch(fetchFn, cacheKey){
+    const cached    = localStorage[cacheKey];
+    const cacheTime = localStorage[cacheKey + "_time"];
+
+    if(cached && cacheTime){
+        const age = Date.now() - parseInt(cacheTime);
+        if(age < CACHE_EXPIRY_MS){
+            console.log("Using cached data");
+            return JSON.parse(cached);
+        }
+    }
+
+    const data = await fetchFn();
+    localStorage[cacheKey]           = JSON.stringify(data);
+    localStorage[cacheKey + "_time"] = Date.now();
+    return data;
+}
+
 // Countries tracked — forex, commodities & indices coverage
 const COUNTRIES = [
   { code: "USD", name: "United States", flag: "🇺🇸", markets: ["forex","indices","commodities"] },
@@ -47,12 +71,12 @@ async function fetchFundamentals() {
 
     try {
         // Step 1 — Get real data from World Bank
-        const res  = await fetch(`${API_URL}/fundamentals`, {
+        const res     = await fetch(`${API_URL}/fundamentals`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         const realData = await res.json();
 
-        // Step 2 — Send real data to AI for scoring
+        // Step 2 — Build prompt with real data
         const prompt = `You are a senior macroeconomic analyst. Based on this REAL economic data, score each country and return ONLY a valid JSON array — no markdown, no explanation.
 
 Real data: ${JSON.stringify(realData)}
@@ -75,21 +99,12 @@ Trends must be one of: rising, falling, stable, expanding, contracting, hold, hi
 overall_score is weighted: rate 25%, cpi 20%, gdp 20%, employment 20%, pmi 15%.
 Respond with ONLY the JSON array.`;
 
-        const aiRes  = await fetch(`${API_URL}/ai/insight`, {
-            method: "POST",
-            headers: {
-                "Content-Type":  "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ prompt })
-        });
+        // Step 3 — Get AI scoring with cache
+        const raw    = await getCachedOrFetch(() => callAI(prompt), "voyager_edge_data");
+        const clean  = typeof raw === "string" ? raw.replace(/```json|```/g, "").trim() : JSON.stringify(raw);
+        const parsed = typeof raw === "string" ? JSON.parse(clean) : raw;
 
-        const aiJson = await aiRes.json();
-        const raw    = aiJson.text || "";
-        const clean  = raw.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
-
-        // Step 3 — Merge with COUNTRIES metadata
+        // Step 4 — Merge with COUNTRIES metadata
         allData = COUNTRIES.map(c => {
             const d = parsed.find(p => p.code === c.code) || {};
             return { ...c, ...d };
@@ -338,8 +353,6 @@ function highlightRow(code) {
 }
 
 // ── Event listeners ─────────────────────────────────────
-document.getElementById("ef-refresh-btn").addEventListener("click", fetchFundamentals);
-
 document.getElementById("ef-market-filter").addEventListener("change", e => {
   marketFilter = e.target.value;
   renderScoreCards();
@@ -350,6 +363,12 @@ document.getElementById("ef-market-filter").addEventListener("change", e => {
 document.getElementById("ef-sort-by").addEventListener("change", e => {
   sortCol = e.target.value;
   renderTable();
+});
+
+document.getElementById("ef-refresh-btn").addEventListener("click", () => {
+    delete localStorage["voyager_edge_data"];
+    delete localStorage["voyager_edge_data_time"];
+    fetchFundamentals();
 });
 
 // ── Crypto tab ────
@@ -540,5 +559,6 @@ function switchTab(tab){
         fetchCrypto();
     }
 }
+
 // ── Initial load ────────────────────────────────────────
 fetchFundamentals();
