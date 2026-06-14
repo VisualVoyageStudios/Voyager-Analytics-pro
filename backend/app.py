@@ -1405,43 +1405,57 @@ async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
 @app.get("/currency/strength")
 async def get_currency_strength(current_user=Depends(get_current_user)):
 
-    base_currencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF"]
-    scores = {c: 0 for c in base_currencies}
+    currencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF", "ZAR"]
 
     async with httpx.AsyncClient() as client:
         try:
-            for base in base_currencies:
-                res = await client.get(
-                    f"https://api.frankfurter.app/latest",
-                    params={"from": base},
-                    timeout=10.0
-                )
-                data = res.json()
-                rates = data.get("rates", {})
+            # Fetch all rates from EUR base (most reliable)
+            res = await client.get(
+                "https://api.frankfurter.app/latest",
+                params={"from": "EUR"},
+                timeout=10.0
+            )
 
-                for target, rate in rates.items():
-                    if target in scores and target != base:
-                        if rate > 1:
-                            scores[base] += 1
-                        else:
-                            scores[base] -= 1
+            data = res.json()
+            rates = data.get("rates", {})
+            rates["EUR"] = 1.0  # EUR is the base
+
+            # Calculate strength by comparing each currency against all others
+            scores = {c: 0.0 for c in currencies}
+
+            for base in currencies:
+                base_rate = rates.get(base)
+                if not base_rate:
+                    continue
+
+                for target in currencies:
+                    if base == target:
+                        continue
+                    target_rate = rates.get(target)
+                    if not target_rate:
+                        continue
+
+                    # Cross rate: how much of target does 1 unit of base buy
+                    cross = target_rate / base_rate
+                    if cross > 1:
+                        scores[base] += 1
+                    else:
+                        scores[base] -= 1
+
+            # Normalize to -100 to +100
+            max_score = max(abs(v) for v in scores.values()) or 1
+
+            return [
+                {
+                    "code":  code,
+                    "score": round((scores[code] / max_score) * 100, 1),
+                    "raw":   scores[code],
+                    "trend": "bullish" if scores[code] > 0 else "bearish" if scores[code] < 0 else "neutral"
+                }
+                for code in currencies
+            ]
 
         except Exception as e:
             print(f"Currency strength error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
-
-    max_score = max(abs(v) for v in scores.values()) or 1
-    normalized = {
-        k: round((v / max_score) * 100, 1)
-        for k, v in scores.items()
-    }
-
-    return [
-        {
-            "code":     code,
-            "score":    normalized[code],
-            "raw":      scores[code],
-            "trend":    "bullish" if normalized[code] > 10 else "bearish" if normalized[code] < -10 else "neutral"
-        }
-        for code in base_currencies
-    ]
+        
