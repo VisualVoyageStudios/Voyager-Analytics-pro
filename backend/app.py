@@ -1241,7 +1241,7 @@ async def ai_insight(
                     "max_tokens": 8000,
                     "messages": [{"role": "user", "content": prompt}]
                 },
-                timeout=30.0
+                timeout=15.0
             )
 
         print(f"Groq status: {res.status_code}")
