@@ -7,6 +7,29 @@ window.addEventListener("unhandledrejection", (e) => {
     console.error("Unhandled promise rejection:", e.reason);
 });
 
+// Cache to prevent data changing on every load
+const CACHE_KEY_DATA    = "voyager_heatmap_data";
+const CACHE_KEY_TIME    = "voyager_heatmap_time";
+const CACHE_EXPIRY_MS   = 60 * 60 * 1000; // 1 hour
+
+async function getCachedOrFetch(fetchFn, cacheKey){
+    const cached    = localStorage[cacheKey];
+    const cacheTime = localStorage[cacheKey + "_time"];
+
+    if(cached && cacheTime){
+        const age = Date.now() - parseInt(cacheTime);
+        if(age < CACHE_EXPIRY_MS){
+            console.log("Using cached data");
+            return JSON.parse(cached);
+        }
+    }
+
+    const data = await fetchFn();
+    localStorage[cacheKey]           = JSON.stringify(data);
+    localStorage[cacheKey + "_time"] = Date.now();
+    return data;
+}
+
 // ── Auth check ───────────────────────────────────────────────────────
 const token = localStorage.getItem("token");
 
@@ -139,10 +162,9 @@ Rules:
 - Return ONLY the JSON array, nothing else`;
 
     try {
-        const raw   = await callAI(prompt);
-        const clean = raw.replace(/```json|```/g, "").trim();
-        console.log("Parsed data preview:", clean.slice(0, 200));
-        allEvents   = JSON.parse(clean);
+        const raw   = await getCachedOrFetch(() => callAI(prompt), "voyager_heatmap_data");
+        const clean = typeof raw === "string" ? raw.replace(/```json|```/g, "").trim() : JSON.stringify(raw);
+        allEvents   = typeof raw === "string" ? JSON.parse(clean) : raw;
 
         populateCountryFilter();
         computeCountryScores();
@@ -157,7 +179,6 @@ Rules:
         showTableError("Could not load economic data. Please refresh.");
     }
 }
-
 
 // ── Country scores ───────────────────────────────────────────────────
 
@@ -444,6 +465,8 @@ document.getElementById("surpriseFilter").addEventListener("change", e => {
 });
 
 document.getElementById("refreshBtn").addEventListener("click", () => {
+    delete localStorage["voyager_heatmap_data"];
+    delete localStorage["voyager_heatmap_data_time"];
     fetchEconomicData();
 });
 
