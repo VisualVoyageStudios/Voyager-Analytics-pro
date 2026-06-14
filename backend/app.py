@@ -1350,3 +1350,47 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
                 print(f"World Bank fetch failed for {metric}: {str(e)}")
 
     return list(results.values())
+
+## crypto fundamentals
+@app.get("/crypto/fundamentals")
+async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
+
+    coins = "bitcoin,ethereum,solana,ripple,binancecoin"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.get(
+                "https://api.coingecko.com/api/v3/coins/markets",
+                params={
+                    "vs_currency": "usd",
+                    "ids": coins,
+                    "order": "market_cap_desc",
+                    "per_page": 10,
+                    "page": 1,
+                    "sparkline": False,
+                    "price_change_percentage": "24h,7d"
+                },
+                timeout=30.0
+            )
+            data = res.json()
+
+            return [
+                {
+                    "code": coin["symbol"].upper(),
+                    "name": coin["name"],
+                    "price": coin["current_price"],
+                    "change_24h": coin.get("price_change_percentage_24h", 0),
+                    "change_7d": coin.get("price_change_percentage_7d_in_currency", 0),
+                    "market_cap": coin["market_cap"],
+                    "volume_24h": coin["total_volume"],
+                    "ath_distance": round(
+                        ((coin["current_price"] - coin["ath"]) / coin["ath"]) * 100, 2
+                    )
+                }
+                for coin in data
+            ]
+
+        except Exception as e:
+            print(f"Crypto fetch error: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+            
