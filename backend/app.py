@@ -1354,43 +1354,50 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
 ## crypto fundamentals
 @app.get("/crypto/fundamentals")
 async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
-
-    coins = ["bitcoin", "ethereum", "solana", "ripple"]
-
     async with httpx.AsyncClient() as client:
         try:
-            results = []
+            res = await client.get(
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={
+                    "ids": "bitcoin,ethereum,solana,ripple",
+                    "vs_currencies": "usd",
+                    "include_24hr_change": "true",
+                    "include_market_cap": "true",
+                    "include_24hr_vol": "true"
+                },
+                headers={"accept": "application/json"},
+                timeout=15.0
+            )
 
-            for coin in coins:
-                res = await client.get(
-                    f"https://api.coincap.io/v2/assets/{coin}",
-                    timeout=10.0
-                )
+            data = res.json()
 
-                data = res.json().get("data", {})
+            if "status" in data:
+                raise HTTPException(status_code=429, detail="Rate limited — try again in a minute")
 
-                if not data:
-                    continue
+            NAME_MAP = {
+                "bitcoin":  ("BTC", "Bitcoin"),
+                "ethereum": ("ETH", "Ethereum"),
+                "solana":   ("SOL", "Solana"),
+                "ripple":   ("XRP", "Ripple")
+            }
 
-                price     = float(data.get("priceUsd", 0))
-                change24h = float(data.get("changePercent24Hr", 0))
-                marketcap = float(data.get("marketCapUsd", 0))
-                volume    = float(data.get("volumeUsd24Hr", 0))
-
-                results.append({
-                    "code":       data.get("symbol", "").upper(),
-                    "name":       data.get("name", ""),
-                    "price":      round(price, 2),
-                    "change_24h": round(change24h, 2),
+            return [
+                {
+                    "code":       NAME_MAP[coin][0],
+                    "name":       NAME_MAP[coin][1],
+                    "price":      round(values.get("usd", 0), 2),
+                    "change_24h": round(values.get("usd_24h_change", 0), 2),
                     "change_7d":  0,
-                    "market_cap": round(marketcap, 0),
-                    "volume_24h": round(volume, 0),
+                    "market_cap": round(values.get("usd_market_cap", 0), 0),
+                    "volume_24h": round(values.get("usd_24h_vol", 0), 0),
                     "ath_distance": 0
-                })
+                }
+                for coin, values in data.items()
+                if coin in NAME_MAP
+            ]
 
-            return results
-
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"Crypto fetch error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
-        
