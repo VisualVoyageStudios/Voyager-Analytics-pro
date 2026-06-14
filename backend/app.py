@@ -1237,7 +1237,7 @@ async def ai_insight(
                 },
                 json={
                     "model": "llama3-8b-8192",
-                    "max_tokens": 4000,
+                    "max_tokens": 8000,
                     "messages": [{"role": "user", "content": prompt}]
                 },
                 timeout=30.0
