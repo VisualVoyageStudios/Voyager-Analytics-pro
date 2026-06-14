@@ -1,6 +1,20 @@
 // switch from local to live host
 const API_URL = "https://voyager-analytics-pro.onrender.com";
 
+async function authFetch(url, options = {}){
+    const res = await fetch(url, options);
+
+    if(res.status === 401){
+        return {
+            ok: false,
+            status: 401,
+            json: async () => ({ error: "Session expired. Please log in again." })
+        };
+    }
+
+    return res;
+}
+
 // API functions
 // Register a new user
 async function registerUser(userData) {
