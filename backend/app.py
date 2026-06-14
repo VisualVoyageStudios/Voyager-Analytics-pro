@@ -1217,7 +1217,8 @@ def get_me(
         "is_premium": user.is_premium
     }
 
-## AI INSIGHTS@app.post("/ai/insight")
+## AI INSIGHTS
+@app.post("/ai/insight")
 async def ai_insight(
     payload: dict,
     current_user=Depends(get_current_user)
