@@ -1412,8 +1412,7 @@ async def get_currency_strength(current_user=Depends(get_current_user)):
         try:
             # Fetch all rates from EUR base (most reliable)
             res = await client.get(
-                "https://api.frankfurter.app/latest",
-                params={"from": "EUR"},
+                "https://open.er-api.com/v6/latest/USD",
                 timeout=10.0
             )
 
