@@ -448,6 +448,11 @@ Write in a professional but direct tone. No bullet points. No headers. Plain par
 
 
 // ── Event listeners ──────────────────────────────────────────────────
+document.getElementById("refreshBtn").addEventListener("click", () => {
+    delete localStorage["voyager_heatmap_data"];
+    delete localStorage["voyager_heatmap_data_time"];
+    fetchEconomicData();
+});
 
 document.getElementById("impactFilter").addEventListener("change", e => {
     activeFilters.impact = e.target.value;
@@ -462,12 +467,6 @@ document.getElementById("countryFilter").addEventListener("change", e => {
 document.getElementById("surpriseFilter").addEventListener("change", e => {
     activeFilters.surprise = e.target.value;
     renderTable();
-});
-
-document.getElementById("refreshBtn").addEventListener("click", () => {
-    delete localStorage["voyager_heatmap_data"];
-    delete localStorage["voyager_heatmap_data_time"];
-    fetchEconomicData();
 });
 
 document.querySelectorAll(".pair-chip").forEach(chip => {
