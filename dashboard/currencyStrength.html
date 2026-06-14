@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency Strength | Voyager Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+        <nav>
+            <a href="dashboard.html"><i class="fas fa-tachograph-digital"></i> Dashboard</a>
+            <a href="accounts.html"><i class="fas fa-briefcase"></i> Accounts</a>
+            <a href="trades.html"><i class="fas fa-chart-line"></i> Trades</a>
+            <a href="analytics.html"><i class="fas fa-eye"></i> Analytics</a>
+            <a href="journal.html"><i class="fas fa-book-open-reader"></i> Journal</a>
+
+            <div class="nav-divider"><span>Market Tools</span></div>
+
+            <a href="economicHeatmap.html"><i class="fas fa-globe"></i> Economic Heatmap</a>
+            <a href="edgeFinder.html"><i class="fas fa-crosshairs"></i> Edge Finder</a>
+            <a href="currencyStrength.html" class="active"><i class="fas fa-signal"></i> Currency Strength</a>
+
+            <div class="nav-divider"><span>Account</span></div>
+
+            <a href="settings.html"><i class="fas fa-gears"></i> Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h2>Currency Strength Meter</h2>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span id="lastUpdated" style="font-size:12px; color:var(--muted);"></span>
+                <button class="btn-primary" id="refreshBtn" style="padding:10px 18px; border:none; border-radius:10px; cursor:pointer; font-size:13px;">
+                    <i class="fas fa-rotate" style="margin-right:6px;"></i>Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Strength Gauges -->
+        <div class="section-heading">
+            <i class="fas fa-signal"></i> Live Strength Scores
+        </div>
+
+        <div id="strengthGrid" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        ">
+            <div style="color:var(--muted); font-size:13px; padding:40px; text-align:center;">
+                <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>
+                Loading currency data…
+            </div>
+        </div>
+
+        <!-- Ranking Table -->
+        <div class="section-heading">
+            <i class="fas fa-trophy"></i> Strength Ranking
+        </div>
+
+        <div class="heatmap-table-wrapper">
+            <table class="heatmap-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Currency</th>
+                        <th>Score</th>
+                        <th>Strength</th>
+                        <th>Bias</th>
+                    </tr>
+                </thead>
+                <tbody id="strengthTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Pair Matrix -->
+        <div class="section-heading" style="margin-top:32px;">
+            <i class="fas fa-table-cells"></i> Pair Strength Matrix
+        </div>
+
+        <div id="pairMatrix" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        "></div>
+
+    </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/pgAnime.js"></script>
+<script src="../js/currencyStrength.js"></script>
+</body>
+</html>
