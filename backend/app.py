@@ -1355,54 +1355,42 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
 @app.get("/crypto/fundamentals")
 async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
 
-    coins = "bitcoin,ethereum,solana,ripple"
+    coins = ["bitcoin", "ethereum", "solana", "ripple"]
 
     async with httpx.AsyncClient() as client:
         try:
-            res = await client.get(
-                "https://api.coingecko.com/api/v3/coins/markets",
-                params={
-                    "vs_currency": "usd",
-                    "ids": coins,
-                    "order": "market_cap_desc",
-                    "per_page": 10,
-                    "page": 1,
-                    "sparkline": "false",
-                    "price_change_percentage": "24h,7d"
-                },
-                headers={
-                    "accept": "application/json"
-                },
-                timeout=15.0
-            )
+            results = []
 
-            print(f"CoinGecko status: {res.status_code}")
-            print(f"CoinGecko response preview: {res.text[:300]}")
+            for coin in coins:
+                res = await client.get(
+                    f"https://api.coincap.io/v2/assets/{coin}",
+                    timeout=10.0
+                )
 
-            data = res.json()
+                data = res.json().get("data", {})
 
-            if not isinstance(data, list):
-                print(f"Unexpected CoinGecko response: {data}")
-                raise HTTPException(status_code=500, detail=f"CoinGecko error: {str(data)}")
+                if not data:
+                    continue
 
-            return [
-                {
-                    "code": coin["symbol"].upper(),
-                    "name": coin["name"],
-                    "price": coin["current_price"],
-                    "change_24h": coin.get("price_change_percentage_24h") or 0,
-                    "change_7d": coin.get("price_change_percentage_7d_in_currency") or 0,
-                    "market_cap": coin["market_cap"],
-                    "volume_24h": coin["total_volume"],
-                    "ath_distance": round(
-                        ((coin["current_price"] - coin["ath"]) / coin["ath"]) * 100, 2
-                    ) if coin.get("ath") else 0
-                }
-                for coin in data
-            ]
+                price     = float(data.get("priceUsd", 0))
+                change24h = float(data.get("changePercent24Hr", 0))
+                marketcap = float(data.get("marketCapUsd", 0))
+                volume    = float(data.get("volumeUsd24Hr", 0))
 
-        except HTTPException:
-            raise
+                results.append({
+                    "code":       data.get("symbol", "").upper(),
+                    "name":       data.get("name", ""),
+                    "price":      round(price, 2),
+                    "change_24h": round(change24h, 2),
+                    "change_7d":  0,
+                    "market_cap": round(marketcap, 0),
+                    "volume_24h": round(volume, 0),
+                    "ath_distance": 0
+                })
+
+            return results
+
         except Exception as e:
             print(f"Crypto fetch error: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))            
+            raise HTTPException(status_code=500, detail=str(e))
+        
