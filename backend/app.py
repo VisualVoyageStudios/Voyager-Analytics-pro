@@ -1333,7 +1333,7 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
                         "mrv": 1,
                         "per_page": 20
                     },
-                    timeout=15.0
+                    timeout=30.0
                 )
                 data = res.json()
 
