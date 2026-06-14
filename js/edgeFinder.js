@@ -508,53 +508,37 @@ function switchTab(tab){
     document.getElementById("forexTab").classList.toggle("active", tab === "forex");
     document.getElementById("cryptoTab").classList.toggle("active", tab === "crypto");
 
+    const thead = document.querySelector(".ef-table thead tr");
+
     if(tab === "forex"){
+        thead.innerHTML = `
+            <th>#</th>
+            <th>Country / Currency</th>
+            <th class="sortable" data-col="score">Overall Score ↕</th>
+            <th class="sortable" data-col="rate">Rate ↕</th>
+            <th class="sortable" data-col="cpi">CPI ↕</th>
+            <th class="sortable" data-col="gdp">GDP ↕</th>
+            <th class="sortable" data-col="employment">Employment ↕</th>
+            <th class="sortable" data-col="pmi">PMI ↕</th>
+            <th>Trend</th>
+            <th>Bias</th>
+        `;
         fetchFundamentals();
     } else {
+        thead.innerHTML = `
+            <th>#</th>
+            <th>Asset</th>
+            <th>Score (24h)</th>
+            <th>Price</th>
+            <th>24h Change</th>
+            <th>7d Change</th>
+            <th>Market Cap</th>
+            <th>Volume 24h</th>
+            <th>From ATH</th>
+            <th>Bias</th>
+        `;
         fetchCrypto();
     }
-
-      function switchTab(tab){
-      activeTab = tab;
-
-      document.getElementById("forexTab").classList.toggle("active", tab === "forex");
-      document.getElementById("cryptoTab").classList.toggle("active", tab === "crypto");
-
-      const thead = document.querySelector(".ef-table thead tr");
-
-      if(tab === "forex"){
-          thead.innerHTML = `
-              <th>#</th>
-              <th>Country / Currency</th>
-              <th class="sortable" data-col="score">Overall Score ↕</th>
-              <th class="sortable" data-col="rate">Rate ↕</th>
-              <th class="sortable" data-col="cpi">CPI ↕</th>
-              <th class="sortable" data-col="gdp">GDP ↕</th>
-              <th class="sortable" data-col="employment">Employment ↕</th>
-              <th class="sortable" data-col="pmi">PMI ↕</th>
-              <th>Trend</th>
-              <th>Bias</th>
-          `;
-          fetchFundamentals();
-      } else {
-          thead.innerHTML = `
-              <th>#</th>
-              <th>Asset</th>
-              <th>Score (24h)</th>
-              <th>Price</th>
-              <th>24h Change</th>
-              <th>7d Change</th>
-              <th>Market Cap</th>
-              <th>Volume 24h</th>
-              <th>From ATH</th>
-              <th>Bias</th>
-          `;
-          fetchCrypto();
-      }
-  }
-
-
 }
-
 // ── Initial load ────────────────────────────────────────
 fetchFundamentals();
