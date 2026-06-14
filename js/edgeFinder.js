@@ -101,6 +101,9 @@ Respond with ONLY the JSON array.`;
 
         // Step 3 — Get AI scoring with cache
         const raw    = await getCachedOrFetch(() => callAI(prompt), "voyager_edge_data");
+
+        console.log("Raw type:", typeof raw, "Preview:", JSON.stringify(raw).slice(0, 200));
+        
         const clean  = typeof raw === "string" ? raw.replace(/```json|```/g, "").trim() : JSON.stringify(raw);
         const parsed = typeof raw === "string" ? JSON.parse(clean) : raw;
 
