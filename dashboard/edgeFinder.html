@@ -597,6 +597,15 @@
           <option value="pmi">Sort: PMI</option>
         </select>
 
+        <div class="ef-crypto-toggle">
+            <button class="pair-chip active" id="forexTab" onclick="switchTab('forex')">
+                <i class="fas fa-chart-line"></i> Forex / Macro
+            </button>
+            <button class="pair-chip" id="cryptoTab" onclick="switchTab('crypto')">
+                <i class="fab fa-bitcoin"></i> Crypto
+            </button>
+        </div>
+
         <button id="ef-refresh-btn" class="ef-refresh-btn">
           <i class="fas fa-rotate-right"></i> Refresh Data
         </button>
