@@ -352,5 +352,209 @@ document.getElementById("ef-sort-by").addEventListener("change", e => {
   renderTable();
 });
 
+// ── Crypto tab ────
+let cryptoData = [];
+let activeTab  = "forex";
+
+async function fetchCrypto(){
+    const grid = document.getElementById("ef-score-grid");
+    const tbody = document.getElementById("ef-table-body");
+
+    grid.innerHTML  = `<div style="color:var(--ef-sub);font-size:13px;">Loading crypto data…</div>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="ef-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>`;
+
+    try {
+        const res  = await fetch(`${API_URL}/crypto/fundamentals`, {
+            headers: { "Authorization": `Bearer ${localStorage.token}` }
+        });
+        cryptoData = await res.json();
+
+        renderCryptoCards();
+        renderCryptoTable();
+        generateCryptoInsight();
+
+    } catch(err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="10" class="ef-empty">
+            <i class="fas fa-triangle-exclamation"></i> Failed to load crypto data.
+        </td></tr>`;
+    }
+}
+
+
+function renderCryptoCards(){
+    const grid = document.getElementById("ef-score-grid");
+
+    grid.innerHTML = cryptoData.map(coin => {
+        const change = coin.change_24h || 0;
+        const cls    = change > 0 ? "bull" : change < 0 ? "bear" : "neu";
+        const color  = change > 0 ? "var(--ef-bull)" : change < 0 ? "var(--ef-bear)" : "var(--ef-neutral)";
+        const sign   = change > 0 ? "+" : "";
+
+        return `
+            <div class="ef-score-card ef-score-card--${cls}">
+                <div class="ef-score-card__header">
+                    <span class="ef-score-card__flag">₿</span>
+                    <span class="ef-score-card__code">${coin.code}</span>
+                </div>
+                <div class="ef-score-card__score" style="color:${color};">
+                    ${sign}${change.toFixed(2)}%
+                </div>
+                <div class="ef-score-card__label">${coin.name}</div>
+                <div class="ef-score-card__bias ef-score-card__bias--${cls}">
+                    $${coin.price.toLocaleString()}
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+
+function renderCryptoTable(){
+    const tbody = document.getElementById("ef-table-body");
+
+    tbody.innerHTML = cryptoData.map((coin, i) => {
+        const change24  = coin.change_24h || 0;
+        const change7d  = coin.change_7d  || 0;
+        const cls24     = change24 > 0 ? "pill-up" : change24 < 0 ? "pill-down" : "pill-flat";
+        const cls7d     = change7d > 0 ? "pill-up" : change7d < 0 ? "pill-down" : "pill-flat";
+        const sign24    = change24 > 0 ? "+" : "";
+        const sign7d    = change7d > 0 ? "+" : "";
+        const bias      = change24 > 2 ? "Bullish" : change24 < -2 ? "Bearish" : "Neutral";
+        const biasCls   = change24 > 2 ? "bull" : change24 < -2 ? "bear" : "neu";
+
+        return `
+            <tr>
+                <td class="rank-num rank-${i+1}">${i+1}</td>
+                <td>
+                    <div class="country-cell">
+                        <span class="flag-sm">₿</span>
+                        <div>
+                            <div class="cname">${coin.name}</div>
+                            <div class="ccode">${coin.code}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="score-bar-wrap">
+                        <div class="score-bar">
+                            <div class="score-bar-fill fill-${biasCls}"
+                                style="width:${Math.min(100, Math.abs(change24) * 10)}%">
+                            </div>
+                        </div>
+                        <span class="score-num" style="color:${change24 > 0 ? 'var(--ef-bull)' : 'var(--ef-bear)'}">
+                            ${sign24}${change24.toFixed(1)}%
+                        </span>
+                    </div>
+                </td>
+                <td>$${coin.price.toLocaleString()}</td>
+                <td><span class="metric-pill ${cls24}">${sign24}${change24.toFixed(2)}%</span></td>
+                <td><span class="metric-pill ${cls7d}">${sign7d}${change7d.toFixed(2)}%</span></td>
+                <td>$${(coin.market_cap / 1e9).toFixed(1)}B</td>
+                <td>$${(coin.volume_24h / 1e9).toFixed(1)}B</td>
+                <td>${coin.ath_distance}%</td>
+                <td>
+                    <span class="metric-pill ${biasCls === 'bull' ? 'pill-up' : biasCls === 'bear' ? 'pill-down' : 'pill-flat'}">
+                        ${bias}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+
+async function generateCryptoInsight(){
+    const insightEl = document.getElementById("ef-insight-text");
+    insightEl.className = "ef-insight-text loading-pulse";
+    insightEl.textContent = "Analysing crypto market conditions…";
+
+    const summary = cryptoData.map(c =>
+        `${c.code}: $${c.price.toLocaleString()}, 24h: ${c.change_24h?.toFixed(2)}%, 7d: ${c.change_7d?.toFixed(2)}%`
+    ).join("; ");
+
+    const prompt = `You are a senior crypto market analyst. Write a concise 3-sentence insight (80-120 words) based on this data:
+${summary}
+
+Cover:
+1. Overall market sentiment (risk-on or risk-off)
+2. Standout movers and what they signal
+3. One actionable observation for traders
+
+Professional tone. No bullet points. Plain paragraph only.`;
+
+    try {
+        const res  = await fetch(`${API_URL}/ai/insight`, {
+            method: "POST",
+            headers: {
+                "Content-Type":  "application/json",
+                "Authorization": `Bearer ${localStorage.token}`
+            },
+            body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        insightEl.textContent = data.text || "Insight unavailable.";
+        insightEl.className   = "ef-insight-text";
+    } catch {
+        insightEl.textContent = "AI insight unavailable right now.";
+        insightEl.className   = "ef-insight-text";
+    }
+}
+
+
+function switchTab(tab){
+    activeTab = tab;
+
+    document.getElementById("forexTab").classList.toggle("active", tab === "forex");
+    document.getElementById("cryptoTab").classList.toggle("active", tab === "crypto");
+
+    if(tab === "forex"){
+        fetchFundamentals();
+    } else {
+        fetchCrypto();
+    }
+
+      function switchTab(tab){
+      activeTab = tab;
+
+      document.getElementById("forexTab").classList.toggle("active", tab === "forex");
+      document.getElementById("cryptoTab").classList.toggle("active", tab === "crypto");
+
+      const thead = document.querySelector(".ef-table thead tr");
+
+      if(tab === "forex"){
+          thead.innerHTML = `
+              <th>#</th>
+              <th>Country / Currency</th>
+              <th class="sortable" data-col="score">Overall Score ↕</th>
+              <th class="sortable" data-col="rate">Rate ↕</th>
+              <th class="sortable" data-col="cpi">CPI ↕</th>
+              <th class="sortable" data-col="gdp">GDP ↕</th>
+              <th class="sortable" data-col="employment">Employment ↕</th>
+              <th class="sortable" data-col="pmi">PMI ↕</th>
+              <th>Trend</th>
+              <th>Bias</th>
+          `;
+          fetchFundamentals();
+      } else {
+          thead.innerHTML = `
+              <th>#</th>
+              <th>Asset</th>
+              <th>Score (24h)</th>
+              <th>Price</th>
+              <th>24h Change</th>
+              <th>7d Change</th>
+              <th>Market Cap</th>
+              <th>Volume 24h</th>
+              <th>From ATH</th>
+              <th>Bias</th>
+          `;
+          fetchCrypto();
+      }
+  }
+
+
+}
+
 // ── Initial load ────────────────────────────────────────
 fetchFundamentals();
