@@ -46,12 +46,14 @@ const COUNTRIES = [
     { code: "CAD", name: "Canada",        flag: "🇨🇦" },
     { code: "NZD", name: "New Zealand",   flag: "🇳🇿" },
     { code: "CHF", name: "Switzerland",   flag: "🇨🇭" },
+    { code: "ZAR", name: "South Africa",  flag: "RSA"},
 ];
 
 const PAIR_GROUPS = {
+    exotic: ["USDZAR"],
     major: ["EURUSD","GBPUSD","USDJPY","USDCHF","AUDUSD","USDCAD","NZDUSD"],
     minor: ["EURGBP","EURJPY","GBPJPY","AUDJPY","CADJPY","EURAUD","GBPAUD"],
-    metals: ["XAUUSD","XAGUSD","US30","NAS100","SPX500"]
+    metals: ["XAUUSD","XAGUSD","US30","NAS100","SPX500", "DE30"]
 };
 
 const PAIR_CURRENCIES = {
@@ -59,9 +61,9 @@ const PAIR_CURRENCIES = {
     USDCHF: ["USD","CHF"], AUDUSD: ["AUD","USD"], USDCAD: ["USD","CAD"],
     NZDUSD: ["NZD","USD"], EURGBP: ["EUR","GBP"], EURJPY: ["EUR","JPY"],
     GBPJPY: ["GBP","JPY"], AUDJPY: ["AUD","JPY"], CADJPY: ["CAD","JPY"],
-    EURAUD: ["EUR","AUD"], GBPAUD: ["GBP","AUD"],
+    EURAUD: ["EUR","AUD"], GBPAUD: ["GBP","AUD"], USDZAR: ["USD","ZAR"],
     XAUUSD: ["SAFE","USD"], XAGUSD: ["SAFE","USD"],
-    US30:   ["USD","RISK"], NAS100: ["USD","RISK"], SPX500: ["USD","RISK"]
+    US30:   ["USD","RISK"], NAS100: ["USD","RISK"], SPX500: ["USD","RISK"], DE30: ["EUR","RISK"]
 };
 
 let allEvents       = [];
