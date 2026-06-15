@@ -1,6 +1,8 @@
 import os
 import uuid
 import httpx
+import json
+
 from uuid import uuid4
 from datetime import datetime, timedelta
 
@@ -1511,3 +1513,126 @@ async def get_session_analysis(
         }
         for name, s in sessions.items()
     ]
+
+## AI personal profile analysis
+@app.get("/ai/trade-insights")
+async def ai_trade_insights(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    account_ids = [
+        a.id for a in
+        db.query(Account).filter(
+            Account.user_id == current_user["user_id"]
+        ).all()
+    ]
+
+    trades = db.query(Trade).filter(
+        Trade.account_id.in_(account_ids)
+    ).all()
+
+    if not trades:
+        raise HTTPException(status_code=404, detail="No trades found")
+
+    # Build summary for AI
+    symbol_stats = {}
+    day_stats    = {}
+    hour_stats   = {}
+
+    for trade in trades:
+        # By symbol
+        if trade.symbol not in symbol_stats:
+            symbol_stats[trade.symbol] = {"trades": 0, "wins": 0, "profit": 0.0}
+        symbol_stats[trade.symbol]["trades"] += 1
+        symbol_stats[trade.symbol]["profit"] += trade.profit
+        if trade.profit > 0:
+            symbol_stats[trade.symbol]["wins"] += 1
+
+        # By day
+        day = trade.created_at.strftime("%A")
+        if day not in day_stats:
+            day_stats[day] = {"trades": 0, "wins": 0, "profit": 0.0}
+        day_stats[day]["trades"] += 1
+        day_stats[day]["profit"] += trade.profit
+        if trade.profit > 0:
+            day_stats[day]["wins"] += 1
+
+        # By hour
+        hour = trade.created_at.hour
+        if hour not in hour_stats:
+            hour_stats[hour] = {"trades": 0, "wins": 0, "profit": 0.0}
+        hour_stats[hour]["trades"] += 1
+        hour_stats[hour]["profit"] += trade.profit
+        if trade.profit > 0:
+            hour_stats[hour]["wins"] += 1
+
+    total_trades = len(trades)
+    total_profit = round(sum(t.profit for t in trades), 2)
+    win_rate     = round(len([t for t in trades if t.profit > 0]) / total_trades * 100, 1)
+
+    symbol_summary = "; ".join([
+        f"{s}: {v['trades']} trades, {round(v['wins']/v['trades']*100,1)}% WR, ${round(v['profit'],2)} P&L"
+        for s, v in sorted(symbol_stats.items(), key=lambda x: x[1]['profit'], reverse=True)[:8]
+    ])
+
+    day_summary = "; ".join([
+        f"{d}: {v['trades']} trades, {round(v['wins']/v['trades']*100,1)}% WR, ${round(v['profit'],2)}"
+        for d, v in day_stats.items()
+    ])
+
+    prompt = f"""You are an expert trading coach analysing a trader's performance data. Give specific, actionable insights.
+
+Trader stats:
+- Total trades: {total_trades}
+- Total profit: ${total_profit}
+- Win rate: {win_rate}%
+
+Performance by symbol: {symbol_summary}
+Performance by day: {day_summary}
+
+Give exactly 6 specific insights in this JSON format — no markdown, no preamble:
+[
+  {{
+    "title": "Short insight title",
+    "detail": "2-3 sentence explanation with specific numbers from the data",
+    "type": "strength" | "weakness" | "opportunity" | "warning"
+  }}
+]
+
+Be specific — use the actual numbers. Don't be generic. Return ONLY the JSON array."""
+
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "max_tokens": 8000,
+                    "messages": [{"role": "user", "content": prompt}]
+                },
+                timeout=30.0
+            )
+
+        data = res.json()
+
+        if "choices" not in data:
+            raise HTTPException(status_code=500, detail=f"Groq error: {data}")
+
+        text  = data["choices"][0]["message"]["content"]
+        clean = text.replace("```json", "").replace("```", "").strip()
+        insights = json.loads(clean)
+
+        return {"insights": insights, "summary": {
+            "total_trades": total_trades,
+            "total_profit": total_profit,
+            "win_rate":     win_rate
+        }}
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Could not parse AI response")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
