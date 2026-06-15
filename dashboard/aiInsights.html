@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Insights | Voyager Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+        <nav>
+            <a href="dashboard.html"><i class="fas fa-tachograph-digital"></i> Dashboard</a>
+            <a href="accounts.html"><i class="fas fa-briefcase"></i> Accounts</a>
+            <a href="trades.html"><i class="fas fa-chart-line"></i> Trades</a>
+            <a href="analytics.html"><i class="fas fa-eye"></i> Analytics</a>
+            <a href="journal.html"><i class="fas fa-book-open-reader"></i> Journal</a>
+
+            <div class="nav-divider"><span>Market Tools</span></div>
+
+            <a href="economicHeatmap.html"><i class="fas fa-globe"></i> Economic Heatmap</a>
+            <a href="edgeFinder.html"><i class="fas fa-crosshairs"></i> Edge Finder</a>
+            <a href="currencyStrength.html"><i class="fas fa-signal"></i> Currency Strength</a>
+
+            <div class="nav-divider"><span>Account</span></div>
+
+            <a href="aiInsights.html" class="active"><i class="fas fa-microchip"></i> AI Insights</a>
+            <a href="sessionAnalysis.html"><i class="fas fa-clock"></i> Session Analysis</a>
+            <a href="reports.html"><i class="fas fa-file-pdf"></i> Reports</a>
+            <a href="settings.html"><i class="fas fa-gears"></i> Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h2>AI Trade Insights</h2>
+            <button class="btn-primary" id="refreshBtn" style="padding:10px 18px; border:none; border-radius:10px; cursor:pointer; font-size:13px;">
+                <i class="fas fa-rotate" style="margin-right:6px;"></i>Refresh
+            </button>
+        </header>
+
+        <!-- Summary bar -->
+        <div id="summaryBar" style="margin-bottom:28px;"></div>
+
+        <!-- Insights Grid -->
+        <div class="section-heading">
+            <i class="fas fa-microchip"></i> Personalised Insights
+        </div>
+
+        <div id="insightsGrid" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        ">
+            <div style="color:var(--muted); padding:60px 20px; text-align:center; grid-column:1/-1;">
+                <i class="fas fa-spinner fa-spin" style="font-size:2rem; display:block; margin-bottom:16px; opacity:0.3;"></i>
+                Analysing your trade history…
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/pgAnime.js"></script>
+<script>
+const token = localStorage.token;
+if(!token) window.location.href = "../login.html";
+
+const TYPE_CONFIG = {
+    strength:    { color: "#22c55e", bg: "rgba(34,197,94,0.08)",   icon: "fa-trophy",          label: "Strength"    },
+    weakness:    { color: "#ef4444", bg: "rgba(239,68,68,0.08)",   icon: "fa-triangle-exclamation", label: "Weakness" },
+    opportunity: { color: "#3b82f6", bg: "rgba(59,130,246,0.08)",  icon: "fa-lightbulb",       label: "Opportunity" },
+    warning:     { color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  icon: "fa-bell",            label: "Warning"     }
+};
+
+async function loadInsights(){
+    const grid = document.getElementById("insightsGrid");
+
+    grid.innerHTML = `
+        <div style="color:var(--muted); padding:60px 20px; text-align:center; grid-column:1/-1;">
+            <i class="fas fa-spinner fa-spin" style="font-size:2rem; display:block; margin-bottom:16px; opacity:0.3;"></i>
+            Analysing your trade history…
+        </div>
+    `;
+
+    try {
+        const res  = await fetch(`${API_URL}/ai/trade-insights`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if(!res.ok){
+            throw new Error(data.detail || "Failed to load insights");
+        }
+
+        renderSummary(data.summary);
+        renderInsights(data.insights);
+
+    } catch(err) {
+        console.error(err);
+        grid.innerHTML = `
+            <div style="color:var(--muted); padding:60px 20px; text-align:center; grid-column:1/-1;">
+                <i class="fas fa-triangle-exclamation" style="font-size:2rem; display:block; margin-bottom:16px; opacity:0.3;"></i>
+                <p>${err.message || "Could not load insights. Try again."}</p>
+            </div>
+        `;
+    }
+}
+
+
+function renderSummary(summary){
+    document.getElementById("summaryBar").innerHTML = `
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        ">
+            <div class="metric-card" style="text-align:center;">
+                <h3>Total Trades</h3>
+                <p style="font-size:2rem; font-weight:800;">${summary.total_trades}</p>
+            </div>
+            <div class="metric-card" style="text-align:center;">
+                <h3>Total Profit</h3>
+                <p style="font-size:2rem; font-weight:800; color:${summary.total_profit >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                    ${summary.total_profit >= 0 ? '+' : ''}$${summary.total_profit}
+                </p>
+            </div>
+            <div class="metric-card" style="text-align:center;">
+                <h3>Win Rate</h3>
+                <p style="font-size:2rem; font-weight:800;">${summary.win_rate}%</p>
+            </div>
+        </div>
+    `;
+}
+
+
+function renderInsights(insights){
+    const grid = document.getElementById("insightsGrid");
+
+    grid.innerHTML = insights.map(insight => {
+        const cfg = TYPE_CONFIG[insight.type] || TYPE_CONFIG.opportunity;
+
+        return `
+            <div style="
+                background: ${cfg.bg};
+                border: 1px solid ${cfg.color}30;
+                border-radius: 16px;
+                padding: 24px;
+                position: relative;
+                overflow: hidden;
+            ">
+                <div style="
+                    position: absolute;
+                    top: 0; left: 0; right: 0;
+                    height: 3px;
+                    background: ${cfg.color};
+                "></div>
+
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                    <div style="
+                        width: 36px; height: 36px;
+                        background: ${cfg.color}20;
+                        border-radius: 10px;
+                        display:flex; align-items:center; justify-content:center;
+                        color: ${cfg.color};
+                        font-size: 15px;
+                    ">
+                        <i class="fas ${cfg.icon}"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; color:${cfg.color}; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                            ${cfg.label}
+                        </div>
+                        <div style="font-weight:700; font-size:15px; margin-top:1px;">
+                            ${insight.title}
+                        </div>
+                    </div>
+                </div>
+
+                <p style="font-size:13px; color:var(--muted); line-height:1.7;">
+                    ${insight.detail}
+                </p>
+            </div>
+        `;
+    }).join("");
+}
+
+
+document.getElementById("refreshBtn").addEventListener("click", loadInsights);
+
+window.onload = loadInsights;
+</script>
+</body>
+</html>
