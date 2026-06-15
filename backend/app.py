@@ -1611,7 +1611,7 @@ Be specific — use the actual numbers. Don't be generic. Return ONLY the JSON a
                 },
                 json={
                     "model": "llama-3.1-8b-instant",
-                    "max_tokens": 8000,
+                    "max_tokens": 5500,
                     "messages": [{"role": "user", "content": prompt}]
                 },
                 timeout=30.0
