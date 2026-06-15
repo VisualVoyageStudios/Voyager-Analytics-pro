@@ -6,13 +6,15 @@ if(!token){
 
 const FLAGS = {
     USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
-    AUD: "🇦🇺", CAD: "🇨🇦", NZD: "🇳🇿", CHF: "🇨🇭"
+    AUD: "🇦🇺", CAD: "🇨🇦", NZD: "🇳🇿", CHF: "🇨🇭",
+    ZAR: "RSA"
 };
 
 const PAIRS = [
     "EURUSD","GBPUSD","USDJPY","USDCHF",
     "AUDUSD","USDCAD","NZDUSD","GBPJPY",
-    "EURJPY","EURGBP","AUDJPY","CADJPY"
+    "EURJPY","EURGBP","AUDJPY","CADJPY",
+    "USDZAR"
 ];
 
 let strengthData = [];
@@ -77,7 +79,7 @@ function renderGauges(){
             ">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-size:24px;">${FLAGS[c.code]}</span>
+                        <span style="font-size:24px;">${FLAGS[c.code] || "🌐"}</span>
                         <div>
                             <div style="font-weight:700; font-size:16px;">${c.code}</div>
                             <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">${label}</div>
