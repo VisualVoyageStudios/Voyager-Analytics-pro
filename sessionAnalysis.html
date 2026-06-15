@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Analysis | Voyager Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+        <nav>
+            <a href="dashboard.html"><i class="fas fa-tachograph-digital"></i> Dashboard</a>
+            <a href="accounts.html"><i class="fas fa-briefcase"></i> Accounts</a>
+            <a href="trades.html"><i class="fas fa-chart-line"></i> Trades</a>
+            <a href="analytics.html"><i class="fas fa-eye"></i> Analytics</a>
+            <a href="journal.html"><i class="fas fa-book-open-reader"></i> Journal</a>
+
+            <div class="nav-divider"><span>Market Tools</span></div>
+
+            <a href="economicHeatmap.html"><i class="fas fa-globe"></i> Economic Heatmap</a>
+            <a href="edgeFinder.html"><i class="fas fa-crosshairs"></i> Edge Finder</a>
+            <a href="currencyStrength.html"><i class="fas fa-signal"></i> Currency Strength</a>
+
+            <div class="nav-divider"><span>Account</span></div>
+
+            <a href="sessionAnalysis.html" class="active"><i class="fas fa-clock"></i> Session Analysis</a>
+            <a href="reports.html"><i class="fas fa-file-pdf"></i> Reports</a>
+            <a href="settings.html"><i class="fas fa-gears"></i> Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h2>Session Analysis</h2>
+        </header>
+
+        <!-- Session Cards -->
+        <div class="section-heading">
+            <i class="fas fa-clock"></i> Performance by Session
+        </div>
+
+        <div id="sessionCards" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        ">
+            <div style="color:var(--muted); padding:40px; text-align:center; grid-column:1/-1;">
+                <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>
+                Loading session data…
+            </div>
+        </div>
+
+        <!-- Best Session Banner -->
+        <div id="bestSessionBanner" style="margin-bottom:32px;"></div>
+
+        <!-- Session Table -->
+        <div class="section-heading">
+            <i class="fas fa-table"></i> Detailed Breakdown
+        </div>
+
+        <div class="heatmap-table-wrapper">
+            <table class="heatmap-table">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Hours (UTC)</th>
+                        <th>Trades</th>
+                        <th>Wins</th>
+                        <th>Losses</th>
+                        <th>Win Rate</th>
+                        <th>Total Profit</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Hourly Breakdown -->
+        <div class="section-heading" style="margin-top:32px;">
+            <i class="fas fa-chart-bar"></i> Profit by Hour (UTC)
+        </div>
+
+        <div class="chart-container">
+            <canvas id="hourlyChart"></canvas>
+        </div>
+
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/pgAnime.js"></script>
+<script>
+const token = localStorage.token;
+if(!token) window.location.href = "../login.html";
+
+const SESSION_COLORS = {
+    "Asian":    "#f59e0b",
+    "London":   "#3b82f6",
+    "New York": "#22c55e",
+    "Pacific":  "#a855f7"
+};
+
+const SESSION_ICONS = {
+    "Asian":    "🌏",
+    "London":   "🇬🇧",
+    "New York": "🗽",
+    "Pacific":  "🌊"
+};
+
+async function loadSessions(){
+    try {
+        const [sessions, trades] = await Promise.all([
+            fetch(`${API_URL}/analytics/sessions`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            }).then(r => r.json()),
+            getTrades(token)
+        ]);
+
+        renderSessionCards(sessions);
+        renderBestSession(sessions);
+        renderSessionTable(sessions);
+        renderHourlyChart(trades);
+
+    } catch(err) {
+        console.error(err);
+        document.getElementById("sessionCards").innerHTML = `
+            <div style="color:var(--muted); text-align:center; padding:40px; grid-column:1/-1;">
+                <i class="fas fa-triangle-exclamation" style="font-size:2rem; opacity:0.3; display:block; margin-bottom:12px;"></i>
+                Could not load session data.
+            </div>
+        `;
+    }
+}
+
+
+function renderSessionCards(sessions){
+    const grid = document.getElementById("sessionCards");
+
+    grid.innerHTML = sessions.map(s => {
+        const color    = SESSION_COLORS[s.session] || "#94a3b8";
+        const icon     = SESSION_ICONS[s.session]  || "🌐";
+        const profitColor = s.profit >= 0 ? "var(--success)" : "var(--danger)";
+        const sign     = s.profit >= 0 ? "+" : "";
+
+        return `
+            <div style="
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 24px;
+                border-top: 3px solid ${color};
+                position: relative;
+            ">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:22px; margin-bottom:6px;">${icon}</div>
+                        <div style="font-weight:700; font-size:16px;">${s.session}</div>
+                        <div style="font-size:11px; color:var(--muted); margin-top:2px;">${s.hours}</div>
+                    </div>
+                    <div style="
+                        background: rgba(255,255,255,0.05);
+                        border-radius: 10px;
+                        padding: 8px 12px;
+                        text-align:center;
+                    ">
+                        <div style="font-size:1.4rem; font-weight:800; color:${profitColor};">
+                            ${sign}$${s.profit}
+                        </div>
+                        <div style="font-size:10px; color:var(--muted);">Total P&L</div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                    <div style="text-align:center; background:rgba(255,255,255,0.03); border-radius:8px; padding:8px;">
+                        <div style="font-weight:700; font-size:15px;">${s.trades}</div>
+                        <div style="font-size:10px; color:var(--muted);">Trades</div>
+                    </div>
+                    <div style="text-align:center; background:rgba(255,255,255,0.03); border-radius:8px; padding:8px;">
+                        <div style="font-weight:700; font-size:15px; color:var(--success);">${s.wins}</div>
+                        <div style="font-size:10px; color:var(--muted);">Wins</div>
+                    </div>
+                    <div style="text-align:center; background:rgba(255,255,255,0.03); border-radius:8px; padding:8px;">
+                        <div style="font-weight:700; font-size:15px; color:${color};">${s.win_rate}%</div>
+                        <div style="font-size:10px; color:var(--muted);">Win Rate</div>
+                    </div>
+                </div>
+
+                <!-- Win rate bar -->
+                <div style="margin-top:14px;">
+                    <div style="background:rgba(255,255,255,0.05); border-radius:4px; height:4px; overflow:hidden;">
+                        <div style="width:${s.win_rate}%; height:100%; background:${color}; border-radius:4px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+
+function renderBestSession(sessions){
+    const best = [...sessions]
+        .filter(s => s.trades > 0)
+        .sort((a, b) => b.profit - a.profit)[0];
+
+    if(!best) return;
+
+    const color = SESSION_COLORS[best.session] || "#94a3b8";
+    const icon  = SESSION_ICONS[best.session]  || "🌐";
+
+    document.getElementById("bestSessionBanner").innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, rgba(${hexToRgb(color)},0.08), transparent);
+            border: 1px solid rgba(${hexToRgb(color)},0.2);
+            border-radius: 14px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        ">
+            <div style="font-size:2rem;">${icon}</div>
+            <div>
+                <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">
+                    Your Best Session
+                </div>
+                <div style="font-weight:700; font-size:16px;">
+                    ${best.session} Session —
+                    <span style="color:${color};">+$${best.profit}</span>
+                    profit with ${best.win_rate}% win rate across ${best.trades} trades
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
+function hexToRgb(hex){
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `${r},${g},${b}`;
+}
+
+
+function renderSessionTable(sessions){
+    const tbody = document.getElementById("sessionTable");
+
+    tbody.innerHTML = sessions.map(s => {
+        const color       = SESSION_COLORS[s.session] || "#94a3b8";
+        const profitColor = s.profit >= 0 ? "var(--success)" : "var(--danger)";
+        const sign        = s.profit >= 0 ? "+" : "";
+
+        return `
+            <tr>
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:3px; height:24px; background:${color}; border-radius:2px;"></div>
+                        <span style="font-weight:600;">${SESSION_ICONS[s.session]} ${s.session}</span>
+                    </div>
+                </td>
+                <td style="color:var(--muted); font-size:12px;">${s.hours}</td>
+                <td style="font-weight:600;">${s.trades}</td>
+                <td style="color:var(--success);">${s.wins}</td>
+                <td style="color:var(--danger);">${s.losses}</td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:60px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                            <div style="width:${s.win_rate}%; height:100%; background:${color};"></div>
+                        </div>
+                        <span style="font-size:12px;">${s.win_rate}%</span>
+                    </div>
+                </td>
+                <td style="font-weight:700; color:${profitColor};">${sign}$${s.profit}</td>
+            </tr>
+        `;
+    }).join("");
+}
+
+
+function renderHourlyChart(trades){
+    const hourlyProfit = Array(24).fill(0);
+    const hourlyCount  = Array(24).fill(0);
+
+    trades.forEach(trade => {
+        const hour = new Date(trade.created_at).getUTCHours();
+        hourlyProfit[hour] += trade.profit;
+        hourlyCount[hour]  += 1;
+    });
+
+    const labels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2,"0")}:00`);
+    const colors = hourlyProfit.map(p => p >= 0 ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)");
+
+    const ctx = document.getElementById("hourlyChart");
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [{
+                label:           "Profit by Hour",
+                data:            hourlyProfit.map(p => parseFloat(p.toFixed(2))),
+                backgroundColor: colors,
+                borderRadius:    4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: (ctx) => `Trades: ${hourlyCount[ctx.dataIndex]}`
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: "#94a3b8", maxRotation: 45 }, grid: { color: "rgba(255,255,255,0.03)" } },
+                y: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } }
+            }
+        }
+    });
+}
+
+window.onload = loadSessions;
+</script>
+</body>
+</html>
