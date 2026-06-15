@@ -1456,7 +1456,7 @@ async def get_currency_strength(current_user=Depends(get_current_user)):
                     "code":  code,
                     "score": round((scores[code] / max_score) * 100, 1),
                     "raw":   scores[code],
-                    "trend": "bullish" if scores[code] > 0 else "bearish" if scores[code] < 0 else "neutral"
+                    "trend": "bullish" if scores[code] > 2 else "bearish" if scores[code] < -2else "neutral"
                 }
                 for code in currencies
             ]
