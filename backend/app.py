@@ -1465,3 +1465,49 @@ async def get_currency_strength(current_user=Depends(get_current_user)):
             print(f"Currency strength error: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
         
+## Market Session Analytics      
+@app.get("/analytics/sessions")
+async def get_session_analysis(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    account_ids = [
+        a.id for a in
+        db.query(Account).filter(
+            Account.user_id == current_user["user_id"]
+        ).all()
+    ]
+
+    trades = db.query(Trade).filter(
+        Trade.account_id.in_(account_ids)
+    ).all()
+
+    sessions = {
+        "Asian":   {"start": 0,  "end": 9,  "trades": 0, "wins": 0, "profit": 0.0},
+        "London":  {"start": 7,  "end": 16, "trades": 0, "wins": 0, "profit": 0.0},
+        "New York":{"start": 12, "end": 21, "trades": 0, "wins": 0, "profit": 0.0},
+        "Pacific": {"start": 21, "end": 24, "trades": 0, "wins": 0, "profit": 0.0},
+    }
+
+    for trade in trades:
+        hour = trade.created_at.hour
+
+        for name, s in sessions.items():
+            if s["start"] <= hour < s["end"]:
+                s["trades"] += 1
+                s["profit"] += trade.profit
+                if trade.profit > 0:
+                    s["wins"] += 1
+
+    return [
+        {
+            "session":  name,
+            "trades":   s["trades"],
+            "wins":     s["wins"],
+            "losses":   s["trades"] - s["wins"],
+            "profit":   round(s["profit"], 2),
+            "win_rate": round((s["wins"] / s["trades"]) * 100, 1) if s["trades"] > 0 else 0,
+            "hours":    f"{s['start']:02d}:00 – {s['end']:02d}:00 UTC"
+        }
+        for name, s in sessions.items()
+    ]
