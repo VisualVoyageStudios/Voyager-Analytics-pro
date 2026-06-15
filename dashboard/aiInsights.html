@@ -200,6 +200,87 @@ function renderInsights(insights){
     }).join("");
 }
 
+// ── Live Session Indicator ───────────────────────────────────────────
+
+function getCurrentSession(){
+    const hour = new Date().getUTCHours();
+
+    const sessions = [
+        { name: "Sydney",   start: 21, end: 6,  color: "#a855f7", icon: "🌊" },
+        { name: "Tokyo",    start: 0,  end: 9,  color: "#f59e0b", icon: "🌏" },
+        { name: "London",   start: 7,  end: 16, color: "#3b82f6", icon: "🇬🇧" },
+        { name: "New York", start: 12, end: 21, color: "#22c55e", icon: "🗽" },
+    ];
+
+    const active = sessions.filter(s => {
+        if(s.start < s.end){
+            return hour >= s.start && hour < s.end;
+        } else {
+            return hour >= s.start || hour < s.end;
+        }
+    });
+
+    return active.length > 0 ? active : [{ name: "Closed", color: "#94a3b8", icon: "🌙" }];
+}
+
+function renderSessionIndicator(){
+    const existing = document.getElementById("sessionIndicator");
+    if(existing) existing.remove();
+
+    const sessions = getCurrentSession();
+    const header   = document.querySelector(".page-header");
+    if(!header) return;
+
+    const indicator = document.createElement("div");
+    indicator.id    = "sessionIndicator";
+    indicator.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+        flex-wrap: wrap;
+    `;
+
+    indicator.innerHTML = sessions.map(s => `
+        <div style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: ${s.color}15;
+            border: 1px solid ${s.color}40;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: ${s.color};
+        ">
+            <span style="
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: ${s.color};
+                display: inline-block;
+                animation: blink 2s infinite;
+            "></span>
+            ${s.icon} ${s.name}
+        </div>
+    `).join("");
+
+    header.appendChild(indicator);
+}
+
+// Pulse animation
+const style = document.createElement("style");
+style.textContent = `
+    @keyframes blink {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+`;
+document.head.appendChild(style);
+
+renderSessionIndicator();
+setInterval(renderSessionIndicator, 60000);
 
 document.getElementById("refreshBtn").addEventListener("click", loadInsights);
 
