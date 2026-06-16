@@ -7,14 +7,14 @@ if(!token){
 const FLAGS = {
     USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
     AUD: "🇦🇺", CAD: "🇨🇦", NZD: "🇳🇿", CHF: "🇨🇭",
-    ZAR: "RSA"
+    ZAR: "za"
 };
 
 const PAIRS = [
     "EURUSD","GBPUSD","USDJPY","USDCHF",
     "AUDUSD","USDCAD","NZDUSD","GBPJPY",
     "EURJPY","EURGBP","AUDJPY","CADJPY",
-    "USDZAR"
+    "USDZAR", "EURZAR", "GBPZAR"
 ];
 
 let strengthData = [];
