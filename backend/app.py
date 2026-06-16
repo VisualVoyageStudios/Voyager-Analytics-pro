@@ -1705,3 +1705,27 @@ async def get_streaks(
         "longest_loss_streak": max(loss_streaks) if loss_streaks else 0,
         "streak_history":      streak_history[-20:]
     }
+
+## AI caching GROQ
+# ── AI Response Cache ─────────────────────────────────────────────────
+import hashlib
+import time
+
+ai_cache = {}
+AI_CACHE_TTL = 3600  # 1 hour in seconds
+
+def get_cache_key(prompt: str) -> str:
+    return hashlib.md5(prompt.encode()).hexdigest()
+
+def get_cached_response(prompt: str):
+    key  = get_cache_key(prompt)
+    item = ai_cache.get(key)
+    if item and (time.time() - item["timestamp"]) < AI_CACHE_TTL:
+        print(f"Cache hit for key: {key[:8]}…")
+        return item["text"]
+    return None
+
+def set_cached_response(prompt: str, text: str):
+    key = get_cache_key(prompt)
+    ai_cache[key] = {"text": text, "timestamp": time.time()}
+    print(f"Cached response for key: {key[:8]}…")
