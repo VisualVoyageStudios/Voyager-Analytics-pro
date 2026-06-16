@@ -582,7 +582,7 @@ async def get_fundamentals(current_user=Depends(get_current_user)):
     country_map = {
         "US": "USD", "XC": "EUR", "GB": "GBP",
         "JP": "JPY", "AU": "AUD", "CA": "CAD",
-        "NZ": "NZD", "CH": "CHF"
+        "NZ": "NZD", "CH": "CHF", "SA": "ZAR"
     }
 
     country_codes = ";".join(country_map.keys())
@@ -666,7 +666,7 @@ async def get_crypto_fundamentals(current_user=Depends(get_current_user)):
 
 @app.get("/currency/strength")
 async def get_currency_strength(current_user=Depends(get_current_user)):
-    currencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF"]
+    currencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF", "ZAR"]
 
     async with httpx.AsyncClient() as client:
         try:
