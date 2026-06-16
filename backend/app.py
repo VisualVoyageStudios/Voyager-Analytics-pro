@@ -1636,3 +1636,72 @@ Be specific — use the actual numbers. Don't be generic. Return ONLY the JSON a
         raise HTTPException(status_code=500, detail="Could not parse AI response")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+## win/lose strick check
+@app.get("/analytics/streaks")
+async def get_streaks(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    account_ids = [
+        a.id for a in
+        db.query(Account).filter(
+            Account.user_id == current_user["user_id"]
+        ).all()
+    ]
+
+    trades = db.query(Trade).filter(
+        Trade.account_id.in_(account_ids)
+    ).order_by(Trade.created_at.asc()).all()
+
+    if not trades:
+        return {
+            "current_streak":      0,
+            "current_streak_type": "none",
+            "best_win_streak":     0,
+            "worst_loss_streak":   0,
+            "longest_win_streak":  0,
+            "longest_loss_streak": 0,
+            "streak_history":      []
+        }
+
+    # Build streak history
+    streak_history = []
+    current_streak = 1
+    current_type   = "win" if trades[0].profit > 0 else "loss"
+
+    for i in range(1, len(trades)):
+        trade_type = "win" if trades[i].profit > 0 else "loss"
+
+        if trade_type == current_type:
+            current_streak += 1
+        else:
+            streak_history.append({
+                "type":   current_type,
+                "length": current_streak,
+                "date":   trades[i - 1].created_at.date().isoformat()
+            })
+            current_streak = 1
+            current_type   = trade_type
+
+    # Add final streak
+    streak_history.append({
+        "type":   current_type,
+        "length": current_streak,
+        "date":   trades[-1].created_at.date().isoformat()
+    })
+
+    win_streaks  = [s["length"] for s in streak_history if s["type"] == "win"]
+    loss_streaks = [s["length"] for s in streak_history if s["type"] == "loss"]
+
+    last = streak_history[-1]
+
+    return {
+        "current_streak":      last["length"],
+        "current_streak_type": last["type"],
+        "best_win_streak":     max(win_streaks)  if win_streaks  else 0,
+        "worst_loss_streak":   max(loss_streaks) if loss_streaks else 0,
+        "longest_win_streak":  max(win_streaks)  if win_streaks  else 0,
+        "longest_loss_streak": max(loss_streaks) if loss_streaks else 0,
+        "streak_history":      streak_history[-20:]
+    }
