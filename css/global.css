@@ -40,7 +40,8 @@ body{
     font-family:Inter,sans-serif;
     min-height:100vh;
 }
-/* nav bar style*/
+
+/* nav style*/
 .navbar{
     display:flex;
     justify-content:space-between;
@@ -294,5 +295,104 @@ body{
     .drawer {
         width: 100%;
         right: -100%;
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* Session Analysis */
+    #sessionCards {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Streak Tracker */
+    #streakStats {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    #streakHistory {
+        gap: 8px !important;
+    }
+
+    /* AI Insights */
+    #insightsGrid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #summaryBar > div {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Currency Strength */
+    #strengthGrid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #pairMatrix {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* Reports */
+    .metric-card {
+        max-width: 100% !important;
+    }
+
+    /* Economic Heatmap */
+    .country-scores {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .pair-impact-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* Edge Finder score cards */
+    #ef-score-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Session indicator wraps */
+    #sessionIndicator {
+        margin-left: 0 !important;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    /* Nav premium badges hide on mobile to save space */
+    .nav-premium-badge {
+        display: none;
+    }
+
+    /* Page header stacks on mobile */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    /* Charts full width */
+    .chart-container canvas {
+        max-height: 250px;
+    }
+
+    /* Pair matrix 2 cols on mobile */
+    .pair-impact-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* Cover KPI boxes on PDF report page */
+    #generateBtn {
+        font-size: 14px !important;
+    }
+
+    /* Best session banner stacks */
+    #bestSessionBanner > div {
+        flex-direction: column !important;
+        text-align: center;
+    }
+
+    /* Streak history wraps nicely */
+    #streakHistory > div {
+        flex: 1 1 calc(50% - 10px);
     }
 }
