@@ -54,6 +54,66 @@ async function loginUser(userData) {
     return response.json();
 }
 
+// ── Premium check ────────────────────────────────────────────────────
+
+async function checkPremium(){
+    try {
+        const res  = await fetch(`${API_URL}/auth/me`, {
+            headers: { "Authorization": `Bearer ${localStorage.token}` }
+        });
+        const data = await res.json();
+        return data.is_premium || false;
+    } catch {
+        return false;
+    }
+}
+
+// For future use — call this to gate a feature
+// Pass the element to hide/show and a message
+async function requirePremium(containerEl, tier = "Starter"){
+    const isPremium = await checkPremium();
+
+    if(!isPremium){
+        containerEl.innerHTML = `
+            <div style="
+                text-align: center;
+                padding: 80px 20px;
+                color: var(--muted);
+            ">
+                <div style="
+                    font-size: 3rem;
+                    margin-bottom: 16px;
+                ">🔒</div>
+                <h3 style="color: white; margin-bottom: 10px;">
+                    ${tier} Feature
+                </h3>
+                <p style="
+                    font-size: 14px;
+                    max-width: 400px;
+                    margin: 0 auto 24px;
+                    line-height: 1.7;
+                ">
+                    This feature is available on the
+                    <strong style="color: #00d4ff;">${tier}</strong>
+                    plan and above. Upgrade to unlock it.
+                </p>
+                <a href="../index.html#pricing" class="btn-primary" style="
+                    padding: 12px 28px;
+                    border-radius: 10px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    display: inline-block;
+                ">
+                    View Pricing
+                </a>
+            </div>
+        `;
+        return false;
+    }
+
+    return true;
+}
+
 // Create a new account for the logged-in user(broker account)
 async function createAccount(accountData, token) {
 
