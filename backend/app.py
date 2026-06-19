@@ -866,3 +866,73 @@ async def ai_trade_insights(current_user=Depends(get_current_user), db: Session 
     except Exception as e:
         print(f"Trade insights error: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
+
+# ── Economic calendar cache ──────────────────────────────────────────
+
+economic_calendar_cache = {"data": None, "timestamp": 0}
+ECONOMIC_CACHE_TTL = 1800  # 30 minutes
+
+
+@app.get("/economic/calendar")
+async def get_economic_calendar(current_user=Depends(get_current_user)):
+
+    if economic_calendar_cache["data"] and (time.time() - economic_calendar_cache["timestamp"]) < ECONOMIC_CACHE_TTL:
+        print("Economic calendar cache hit")
+        return economic_calendar_cache["data"]
+
+    urls = [
+        "https://nfs.faireconomy.media/ff_calendar_lastweek.json",
+        "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+        "https://nfs.faireconomy.media/ff_calendar_nextweek.json"
+    ]
+
+    majors      = {"USD", "EUR", "GBP", "JPY", "AUD", "CAD", "NZD", "CHF", "ZAR"}
+    all_events  = []
+
+    async with httpx.AsyncClient() as client:
+        for url in urls:
+            try:
+                res = await client.get(
+                    url,
+                    timeout=15.0,
+                    headers={"User-Agent": "Mozilla/5.0 (Voyager Analytics)"}
+                )
+                data = res.json()
+                if isinstance(data, list):
+                    all_events.extend(data)
+            except Exception as e:
+                print(f"Calendar fetch failed for {url}: {str(e)}")
+
+    cleaned = []
+    seen    = set()
+
+    for e in all_events:
+        country = e.get("country", "")
+        impact  = e.get("impact", "")
+
+        if country not in majors:
+            continue
+        if impact not in ("High", "Medium"):
+            continue
+
+        key = (e.get("title", ""), country, e.get("date", ""))
+        if key in seen:
+            continue
+        seen.add(key)
+
+        cleaned.append({
+            "event":    e.get("title", ""),
+            "country":  country,
+            "impact":   impact.lower(),
+            "actual":   e.get("actual", "") or "",
+            "forecast": e.get("forecast", "") or "",
+            "previous": e.get("previous", "") or "",
+            "date":     e.get("date", "")
+        })
+
+    cleaned.sort(key=lambda x: x["date"])
+
+    economic_calendar_cache["data"]      = cleaned
+    economic_calendar_cache["timestamp"] = time.time()
+
+    return cleaned
