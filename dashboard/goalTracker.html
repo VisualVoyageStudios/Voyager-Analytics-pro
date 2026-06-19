@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goal Tracker | Voyager Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+        <nav>
+            <a href="dashboard.html"><i class="fas fa-tachograph-digital"></i> Dashboard</a>
+            <a href="accounts.html"><i class="fas fa-briefcase"></i> Accounts</a>
+            <a href="trades.html"><i class="fas fa-chart-line"></i> Trades</a>
+            <a href="analytics.html"><i class="fas fa-eye"></i> Analytics</a>
+            <a href="journal.html"><i class="fas fa-book-open-reader"></i> Journal</a>
+
+            <div class="nav-divider"><span>Market Tools</span></div>
+
+            <a href="economicHeatmap.html"><i class="fas fa-globe"></i> Economic Heatmap <span class="nav-premium-badge">Elite</span></a>
+            <a href="edgeFinder.html"><i class="fas fa-crosshairs"></i> Edge Finder <span class="nav-premium-badge">Elite</span></a>
+            <a href="currencyStrength.html"><i class="fas fa-signal"></i> Currency Strength <span class="nav-premium-badge">Elite</span></a>
+
+            <div class="nav-divider"><span>Premium</span></div>
+
+            <a href="aiInsights.html"><i class="fas fa-microchip"></i> AI Insights <span class="nav-premium-badge">Pro</span></a>
+            <a href="sessionAnalysis.html"><i class="fas fa-clock"></i> Session Analysis <span class="nav-premium-badge">Starter</span></a>
+            <a href="streaks.html"><i class="fas fa-fire"></i> Streak Tracker <span class="nav-premium-badge">Starter</span></a>
+            <a href="goalTracker.html" class="active"><i class="fas fa-bullseye"></i> Goal Tracker <span class="nav-premium-badge">Starter</span></a>
+            <a href="reports.html"><i class="fas fa-file-pdf"></i> Reports <span class="nav-premium-badge">Elite</span></a>
+
+            <div class="nav-divider"><span>Account</span></div>
+
+            <a href="settings.html"><i class="fas fa-gears"></i> Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h2>Monthly Goal Tracker</h2>
+            <button class="btn-primary" id="editGoalBtn" style="padding:10px 18px; border:none; border-radius:10px; cursor:pointer; font-size:13px;">
+                <i class="fas fa-pen" style="margin-right:6px;"></i>Set Goal
+            </button>
+        </header>
+
+        <!-- Goal Editor (hidden by default) -->
+        <div id="goalEditor" class="metric-card" style="max-width:480px; margin-bottom:24px; display:none;">
+            <h3 style="margin-bottom:16px; font-size:16px; opacity:1;">Set This Month's Goal</h3>
+            <form id="goalForm" style="display:flex; flex-direction:column; gap:12px;">
+                <div>
+                    <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">
+                        Profit Target ($)
+                    </label>
+                    <input type="number" id="targetProfit" step="0.01" required style="
+                        width:100%; padding:12px; border-radius:10px;
+                        border:1px solid var(--border); background:var(--bg); color:white;
+                    ">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">
+                        Trade Count Target (optional)
+                    </label>
+                    <input type="number" id="targetTrades" style="
+                        width:100%; padding:12px; border-radius:10px;
+                        border:1px solid var(--border); background:var(--bg); color:white;
+                    ">
+                </div>
+                <button type="submit" class="btn-primary" style="
+                    padding:12px; border:none; border-radius:10px; cursor:pointer; font-weight:600;
+                ">Save Goal</button>
+            </form>
+            <p id="goalMsg" style="margin-top:10px; font-size:13px;"></p>
+        </div>
+
+        <!-- Current Goal Progress -->
+        <div id="goalProgress" style="margin-bottom:32px;"></div>
+
+        <!-- History -->
+        <div class="section-heading">
+            <i class="fas fa-history"></i> Goal History
+        </div>
+
+        <div id="goalHistory" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        "></div>
+
+    </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/pgAnime.js"></script>
+<script>
+const token = localStorage.token;
+if(!token) window.location.href = "../login.html";
+
+const editor   = document.getElementById("goalEditor");
+const editBtn  = document.getElementById("editGoalBtn");
+
+editBtn.addEventListener("click", () => {
+    editor.style.display = editor.style.display === "none" ? "block" : "none";
+});
+
+
+async function loadGoal(){
+    try {
+        const res  = await fetch(`${API_URL}/goals/current`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        renderProgress(data);
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+
+function renderProgress(data){
+    const container = document.getElementById("goalProgress");
+
+    if(!data.has_goal){
+        container.innerHTML = `
+            <div class="metric-card" style="text-align:center; padding:50px 20px;">
+                <i class="fas fa-bullseye" style="font-size:2.5rem; opacity:0.2; display:block; margin-bottom:16px;"></i>
+                <h3 style="margin-bottom:8px;">No goal set for this month</h3>
+                <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">
+                    You've made $${data.actual_profit} from ${data.actual_trades} trades so far.
+                    Set a target to start tracking your progress.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    const pct      = Math.max(0, Math.min(100, data.progress_pct));
+    const color    = data.on_track ? "var(--success)" : "#f59e0b";
+    const bg       = data.on_track ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)";
+    const border   = data.on_track ? "rgba(34,197,94,0.2)"  : "rgba(245,158,11,0.2)";
+    const statusTxt = data.on_track ? "On Track 🎯" : "Behind Pace ⚠️";
+    const remaining = Math.max(0, data.target_profit - data.actual_profit);
+
+    container.innerHTML = `
+        <div style="
+            background: ${bg};
+            border: 1px solid ${border};
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 20px;
+        ">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">This Month's Goal</div>
+                    <div style="font-size:2rem; font-weight:800;">
+                        $${data.actual_profit} <span style="color:var(--muted); font-size:1.2rem; font-weight:400;">/ $${data.target_profit}</span>
+                    </div>
+                </div>
+                <span style="
+                    background: ${color}20; color: ${color};
+                    padding: 6px 16px; border-radius: 20px;
+                    font-size: 13px; font-weight: 700;
+                ">${statusTxt}</span>
+            </div>
+
+            <!-- Progress bar -->
+            <div style="background:rgba(255,255,255,0.05); border-radius:8px; height:14px; overflow:hidden; margin-bottom:8px;">
+                <div style="width:${pct}%; height:100%; background:${color}; border-radius:8px; transition:width 0.6s ease;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:24px;">
+                <span>${pct}% complete</span>
+                <span>${data.days_remaining} days remaining</span>
+            </div>
+
+            <!-- Stats row -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+                <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:14px; text-align:center;">
+                    <div style="font-size:1.3rem; font-weight:700;">$${remaining.toFixed(2)}</div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:4px;">Remaining</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:14px; text-align:center;">
+                    <div style="font-size:1.3rem; font-weight:700;">${data.actual_trades}${data.target_trades ? ` / ${data.target_trades}` : ""}</div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:4px;">Trades</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:14px; text-align:center;">
+                    <div style="font-size:1.3rem; font-weight:700;">${data.actual_win_rate}%</div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:4px;">Win Rate</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
+async function loadHistory(){
+    try {
+        const res  = await fetch(`${API_URL}/goals/history`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        renderHistory(data);
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+
+function renderHistory(history){
+    const container = document.getElementById("goalHistory");
+
+    if(!history || history.length === 0){
+        container.innerHTML = `
+            <p style="color:var(--muted); font-size:13px; grid-column:1/-1;">
+                No past goals yet — set your first one above.
+            </p>
+        `;
+        return;
+    }
+
+    container.innerHTML = history.map(g => {
+        const color = g.achieved ? "var(--success)" : "var(--danger)";
+        const badge = g.achieved ? "Achieved ✅" : "Missed";
+        const pct   = Math.max(0, Math.min(100, g.progress_pct));
+
+        return `
+            <div class="metric-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="opacity:1; font-size:14px;">${g.month}</h3>
+                    <span style="
+                        font-size:11px; font-weight:700; color:${color};
+                        background:${color}15; padding:3px 10px; border-radius:12px;
+                    ">${badge}</span>
+                </div>
+                <p style="font-size:1.4rem; font-weight:800; margin-bottom:8px;">
+                    $${g.actual_profit} <span style="color:var(--muted); font-size:0.9rem; font-weight:400;">/ $${g.target_profit}</span>
+                </p>
+                <div style="background:rgba(255,255,255,0.05); border-radius:6px; height:6px; overflow:hidden;">
+                    <div style="width:${pct}%; height:100%; background:${color};"></div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+
+document.getElementById("goalForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const targetProfit = parseFloat(document.getElementById("targetProfit").value);
+    const targetTrades  = document.getElementById("targetTrades").value
+        ? parseInt(document.getElementById("targetTrades").value)
+        : null;
+
+    const msg = document.getElementById("goalMsg");
+
+    try {
+        const res = await fetch(`${API_URL}/goals`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ target_profit: targetProfit, target_trades: targetTrades })
+        });
+
+        const data = await res.json();
+
+        if(res.ok){
+            msg.style.color = "var(--success)";
+            msg.textContent = data.message;
+            editor.style.display = "none";
+            loadGoal();
+        } else {
+            msg.style.color = "var(--danger)";
+            msg.textContent = data.detail || "Failed to save goal.";
+        }
+    } catch(err) {
+        msg.style.color = "var(--danger)";
+        msg.textContent = "Something went wrong.";
+    }
+});
+
+
+window.onload = () => {
+    loadGoal();
+    loadHistory();
+};
+</script>
+</body>
+</html>
