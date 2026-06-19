@@ -248,7 +248,8 @@ function renderTable() {
             return activeFilters.surprise === "positive" ? diff > 0 : diff < 0;
         });
     }
-
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
     if (events.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7">
             <div class="empty-state">
