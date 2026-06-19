@@ -1,41 +1,9 @@
-// ── Global error tracker ─────────────────────────────────────────────
 window.addEventListener("error", (e) => {
     console.error("Global error:", e.message, "at", e.filename, "line", e.lineno);
 });
 
-window.addEventListener("unhandledrejection", (e) => {
-    console.error("Unhandled promise rejection:", e.reason);
-});
-
-// Cache to prevent data changing on every load
-const CACHE_KEY_DATA    = "voyager_heatmap_data";
-const CACHE_KEY_TIME    = "voyager_heatmap_time";
-const CACHE_EXPIRY_MS   = 60 * 60 * 1000; // 1 hour
-
-async function getCachedOrFetch(fetchFn, cacheKey){
-    const cached    = localStorage[cacheKey];
-    const cacheTime = localStorage[cacheKey + "_time"];
-
-    if(cached && cacheTime){
-        const age = Date.now() - parseInt(cacheTime);
-        if(age < CACHE_EXPIRY_MS){
-            console.log("Using cached data");
-            return JSON.parse(cached);
-        }
-    }
-
-    const data = await fetchFn();
-    localStorage[cacheKey]           = JSON.stringify(data);
-    localStorage[cacheKey + "_time"] = Date.now();
-    return data;
-}
-
-// ── Auth check ───────────────────────────────────────────────────────
-const token = localStorage.getItem("token");
-
-if(!token){
-    window.location.href = "../login.html";
-}
+const token = localStorage.token;
+if(!token){ window.location.href = "../login.html"; }
 
 const COUNTRIES = [
     { code: "USD", name: "United States", flag: "🇺🇸" },
@@ -46,14 +14,12 @@ const COUNTRIES = [
     { code: "CAD", name: "Canada",        flag: "🇨🇦" },
     { code: "NZD", name: "New Zealand",   flag: "🇳🇿" },
     { code: "CHF", name: "Switzerland",   flag: "🇨🇭" },
-    { code: "ZAR", name: "South Africa",  flag: "RSA"},
 ];
 
 const PAIR_GROUPS = {
-    exotic: ["USDZAR"],
-    major: ["EURUSD","GBPUSD","USDJPY","USDCHF","AUDUSD","USDCAD","NZDUSD"],
-    minor: ["EURGBP","EURJPY","GBPJPY","AUDJPY","CADJPY","EURAUD","GBPAUD"],
-    metals: ["XAUUSD","XAGUSD","US30","NAS100","SPX500", "DE30"]
+    major:  ["EURUSD","GBPUSD","USDJPY","USDCHF","AUDUSD","USDCAD","NZDUSD"],
+    minor:  ["EURGBP","EURJPY","GBPJPY","AUDJPY","CADJPY","EURAUD","GBPAUD"],
+    metals: ["XAUUSD","XAGUSD","US30","NAS100","SPX500"]
 };
 
 const PAIR_CURRENCIES = {
@@ -61,9 +27,9 @@ const PAIR_CURRENCIES = {
     USDCHF: ["USD","CHF"], AUDUSD: ["AUD","USD"], USDCAD: ["USD","CAD"],
     NZDUSD: ["NZD","USD"], EURGBP: ["EUR","GBP"], EURJPY: ["EUR","JPY"],
     GBPJPY: ["GBP","JPY"], AUDJPY: ["AUD","JPY"], CADJPY: ["CAD","JPY"],
-    EURAUD: ["EUR","AUD"], GBPAUD: ["GBP","AUD"], USDZAR: ["USD","ZAR"],
+    EURAUD: ["EUR","AUD"], GBPAUD: ["GBP","AUD"],
     XAUUSD: ["SAFE","USD"], XAGUSD: ["SAFE","USD"],
-    US30:   ["USD","RISK"], NAS100: ["USD","RISK"], SPX500: ["USD","RISK"], DE30: ["EUR","RISK"]
+    US30:   ["USD","RISK"], NAS100: ["USD","RISK"], SPX500: ["USD","RISK"]
 };
 
 let allEvents       = [];
@@ -72,101 +38,48 @@ let activePairGroup = "major";
 let activeFilters   = { impact: "all", country: "all", surprise: "all" };
 
 
-// ── Single shared AI caller ──────────────────────────────────────────
+// ── Value parsing ────────────────────────────────────────────────────
 
-async function callAI(prompt){
-    const endpoint = `${API_URL}/ai/insight`;
-    console.log("[callAI] POST →", endpoint);
-
-    let res;
-    try {
-        res = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ prompt })
-        });
-    } catch (networkErr) {
-        console.error("[callAI] Network/fetch error:", networkErr);
-        throw new Error("Network error: " + networkErr.message);
-    }
-
-    console.log("[callAI] HTTP status:", res.status, res.statusText);
-
-    // Read body as text first so we can log it even if it's not JSON
-    const rawBody = await res.text();
-    console.log("[callAI] Raw response body:", rawBody.slice(0, 500));
-
-    if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${rawBody.slice(0, 200)}`);
-    }
-
-    let data;
-    try {
-        data = JSON.parse(rawBody);
-    } catch (parseErr) {
-        console.error("[callAI] JSON parse failed:", parseErr);
-        throw new Error("Response is not valid JSON: " + rawBody.slice(0, 200));
-    }
-
-    console.log("[callAI] Parsed keys:", Object.keys(data));
-
-    // Support multiple possible response shapes from the backend
-    // Check common field names: text, result, content, message, response, output
-    const text =
-        data.text      ??
-        data.result    ??
-        data.content   ??
-        data.message   ??
-        data.response  ??
-        data.output    ??
-        // Anthropic SDK passthrough shape: data.content[0].text
-        data?.content?.[0]?.text ??
-        null;
-
-    if (text === null) {
-        console.error("[callAI] Could not find text in response. Full data:", JSON.stringify(data));
-        throw new Error("No text field found. Keys were: " + Object.keys(data).join(", "));
-    }
-
-    return text;
+function parseValue(str){
+    if(!str || String(str).trim() === "") return { value: null, unit: "", raw: "—" };
+    const s     = String(str).trim();
+    const match = s.match(/^(-?[\d,.]+)\s*([%KMBkmb]?)$/);
+    if(!match) return { value: null, unit: "", raw: s };
+    const num  = parseFloat(match[1].replace(/,/g, ""));
+    const unit = match[2] || "";
+    return { value: num, unit, raw: s };
 }
 
 
-// ── Fetch economic data ──────────────────────────────────────────────
+// ── AI caller (for the insight strip only) ──────────────────────────
+
+async function callAI(prompt){
+    const res  = await fetch(`${API_URL}/ai/insight`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    if(!data.text) throw new Error("No text in response");
+    return data.text;
+}
+
+
+// ── Fetch REAL economic calendar ─────────────────────────────────────
 
 async function fetchEconomicData() {
     setTableLoading(true);
 
-    const dateStr = new Date().toISOString().slice(0, 10);
-
-    const prompt = `You are a financial data API. Return ONLY a JSON array — no markdown, no preamble, no backticks.
-
-Generate 32 realistic high and medium-impact economic data releases for the 8 major currency countries (USD, EUR, GBP, JPY, AUD, CAD, NZD, CHF) covering the past 45 days from ${dateStr}.
-
-Each item must have EXACTLY these fields:
-- "event": string — short event name (e.g. "CPI y/y", "NFP", "GDP q/q", "Retail Sales m/m", "PMI Manufacturing", "Interest Rate Decision", "Trade Balance", "Unemployment Rate")
-- "country": string — one of: USD, EUR, GBP, JPY, AUD, CAD, NZD, CHF
-- "impact": string — "high" or "medium"
-- "actual": number
-- "forecast": number
-- "unit": string — e.g. "%", "K", "B", "index"
-- "date": string — ISO date YYYY-MM-DD, within past 45 days from ${dateStr}
-
-Rules:
-- Make the data internally consistent and realistic for ${dateStr}
-- Vary the outcomes — roughly 45% positive surprises, 45% negative, 10% inline
-- Include at least 4 high-impact USD events (NFP, CPI, etc.)
-- Include at least 2 Interest Rate Decision events
-- Spread dates realistically across the 45-day window
-- Return ONLY the JSON array, nothing else`;
-
     try {
-        const raw   = await getCachedOrFetch(() => callAI(prompt), "voyager_heatmap_data");
-        const clean = typeof raw === "string" ? raw.replace(/```json|```/g, "").trim() : JSON.stringify(raw);
-        allEvents   = typeof raw === "string" ? JSON.parse(clean) : raw;
+        const res = await fetch(`${API_URL}/economic/calendar`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        allEvents = await res.json();
+
+        if(!Array.isArray(allEvents)) throw new Error("Invalid calendar data");
 
         populateCountryFilter();
         computeCountryScores();
@@ -178,11 +91,12 @@ Rules:
 
     } catch (err) {
         console.error("Economic data fetch failed:", err);
-        showTableError("Could not load economic data. Please refresh.");
+        showTableError("Could not load economic calendar. Please refresh.");
     }
 }
 
-// ── Country scores ───────────────────────────────────────────────────
+
+// ── Country scores (only from RELEASED events) ───────────────────────
 
 function computeCountryScores() {
     const sums   = {};
@@ -192,10 +106,18 @@ function computeCountryScores() {
 
     allEvents.forEach(ev => {
         if (!sums.hasOwnProperty(ev.country)) return;
+
+        const actual   = parseValue(ev.actual);
+        const forecast = parseValue(ev.forecast);
+
+        // Skip events that haven't released yet (no actual)
+        if (actual.value === null || forecast.value === null) return;
+
         const weight  = ev.impact === "high" ? 2 : 1;
-        const base    = Math.abs(ev.forecast) || 1;
-        const dev     = ((ev.actual - ev.forecast) / base) * 100;
+        const base    = Math.abs(forecast.value) || 1;
+        const dev     = ((actual.value - forecast.value) / base) * 100;
         const clamped = Math.max(-10, Math.min(10, dev));
+
         sums[ev.country]   += clamped * weight;
         counts[ev.country] += weight;
     });
@@ -221,22 +143,16 @@ function flagFor(code) {
 
 function isRecent(dateStr) {
     const diff = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24);
-    return diff <= 7;
+    return diff >= 0 && diff <= 7;
 }
 
-function formatChange(actual, forecast, unit) {
-    const diff = actual - forecast;
-    if (Math.abs(diff) < 0.001) return { text: "—", cls: "change-neutral" };
-    const sign      = diff > 0 ? "+" : "";
-    const formatted = Math.abs(diff) < 1
-        ? `${sign}${diff.toFixed(2)}${unit}`
-        : `${sign}${diff.toFixed(1)}${unit}`;
-    return { text: formatted, cls: diff > 0 ? "change-positive" : "change-negative" };
+function isUpcoming(dateStr) {
+    return new Date(dateStr).getTime() > Date.now();
 }
 
 function updateRefreshTime() {
-    document.getElementById("lastRefreshed").textContent =
-        `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    const el = document.getElementById("lastRefreshed");
+    if(el) el.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function setTableLoading(on) {
@@ -245,7 +161,7 @@ function setTableLoading(on) {
             <tr><td colspan="7">
                 <div class="table-loading">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Fetching economic data…</p>
+                    <p>Fetching real economic calendar…</p>
                 </div>
             </td></tr>`;
     }
@@ -259,8 +175,8 @@ function showTableError(msg) {
                 <p>${msg}</p>
             </div>
         </td></tr>`;
-    document.getElementById("aiInsightText").innerHTML =
-        `<span style="color:var(--danger);">AI insight unavailable — data load failed.</span>`;
+    const insightEl = document.getElementById("aiInsightText");
+    if(insightEl) insightEl.innerHTML = `<span style="color:var(--danger);">AI insight unavailable — data load failed.</span>`;
 }
 
 
@@ -305,7 +221,7 @@ function renderCountryScores() {
 }
 
 
-// ── Render heatmap table ─────────────────────────────────────────────
+// ── Render heatmap table (real data, past + upcoming) ────────────────
 
 function renderTable() {
     const tbody = document.getElementById("heatmapTableBody");
@@ -325,12 +241,13 @@ function renderTable() {
 
     if (activeFilters.surprise !== "all") {
         events = events.filter(e => {
-            const diff = e.actual - e.forecast;
+            const actual   = parseValue(e.actual);
+            const forecast = parseValue(e.forecast);
+            if (actual.value === null || forecast.value === null) return false;
+            const diff = actual.value - forecast.value;
             return activeFilters.surprise === "positive" ? diff > 0 : diff < 0;
         });
     }
-
-    events.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (events.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7">
@@ -342,11 +259,31 @@ function renderTable() {
     }
 
     tbody.innerHTML = events.map(ev => {
-        const diff   = ev.actual - ev.forecast;
-        const change = formatChange(ev.actual, ev.forecast, ev.unit);
-        const recent = isRecent(ev.date);
-        const barW   = Math.min(40, Math.abs(diff / (Math.abs(ev.forecast) || 1)) * 400);
-        const barClr = diff > 0 ? "#3b82f6" : diff < 0 ? "#ef4444" : "#94a3b8";
+        const actual    = parseValue(ev.actual);
+        const forecast  = parseValue(ev.forecast);
+        const released  = actual.value !== null;
+        const upcoming  = isUpcoming(ev.date);
+        const recent    = isRecent(ev.date);
+
+        let changeHtml = `<span class="change-neutral">—</span>`;
+
+        if (released && forecast.value !== null) {
+            const diff    = actual.value - forecast.value;
+            const cls     = diff > 0 ? "change-positive" : diff < 0 ? "change-negative" : "change-neutral";
+            const sign    = diff > 0 ? "+" : "";
+            const barW    = Math.min(40, Math.abs(diff / (Math.abs(forecast.value) || 1)) * 400);
+            const barClr  = diff > 0 ? "#3b82f6" : diff < 0 ? "#ef4444" : "#94a3b8";
+            changeHtml = `
+                <span class="${cls}">${sign}${diff.toFixed(2)}${actual.unit}</span>
+                <span class="change-bar" style="background:${barClr};width:${barW}px;"></span>
+            `;
+        } else if (upcoming) {
+            changeHtml = `<span style="color:#f0bf2d; font-size:11px; font-weight:700;">UPCOMING</span>`;
+        }
+
+        const dateDisplay = new Date(ev.date).toLocaleDateString("en-GB", {
+            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+        });
 
         return `
             <tr>
@@ -362,14 +299,11 @@ function renderTable() {
                         ${ev.impact === "high" ? "●" : "◐"} ${ev.impact.charAt(0).toUpperCase() + ev.impact.slice(1)}
                     </span>
                 </td>
-                <td class="num-cell val-actual">${ev.actual}${ev.unit}</td>
-                <td class="num-cell val-forecast">${ev.forecast}${ev.unit}</td>
-                <td class="num-cell change-cell ${change.cls}">
-                    ${change.text}
-                    <span class="change-bar" style="background:${barClr};width:${barW}px;"></span>
-                </td>
+                <td class="num-cell val-actual">${released ? actual.raw : "—"}</td>
+                <td class="num-cell val-forecast">${forecast.raw || "—"}</td>
+                <td class="num-cell change-cell">${changeHtml}</td>
                 <td class="date-cell">
-                    ${recent ? `<span class="date-recent">⚡ ${ev.date}</span>` : ev.date}
+                    ${recent ? `<span class="date-recent">⚡ ${dateDisplay}</span>` : dateDisplay}
                 </td>
             </tr>
         `;
@@ -412,36 +346,43 @@ function renderPairBias(group = activePairGroup) {
 }
 
 
-// ── AI insight ───────────────────────────────────────────────────────
+// ── AI insight (based on REAL data) ──────────────────────────────────
 
 async function generateAIInsight() {
     const insightEl = document.getElementById("aiInsightText");
-    insightEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Analysing latest economic releases…`;
+    insightEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Analysing the latest economic calendar…`;
 
-    const topEvents = [...allEvents]
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 14)
-        .map(e => `${e.country} ${e.event}: actual=${e.actual}${e.unit} forecast=${e.forecast}${e.unit} (${e.actual >= e.forecast ? "beat" : "missed"})`)
-        .join("; ");
+    const released = allEvents.filter(e => parseValue(e.actual).value !== null);
+    const upcoming = allEvents.filter(e => isUpcoming(e.date));
+
+    const releasedSummary = released.slice(-10).map(e => {
+        const a = parseValue(e.actual), f = parseValue(e.forecast);
+        return `${e.country} ${e.event}: actual=${a.raw} forecast=${f.raw}`;
+    }).join("; ");
+
+    const upcomingSummary = upcoming.slice(0, 8).map(e =>
+        `${e.country} ${e.event} (${e.impact}) on ${new Date(e.date).toLocaleDateString()}`
+    ).join("; ");
 
     const scoresSummary = Object.entries(countryScores)
         .map(([k, v]) => `${k}:${v > 0 ? "+" : ""}${v}`)
         .join(", ");
 
-    const prompt = `You are a senior FX macro analyst at a prop trading firm. Write a concise 3-sentence market insight (80-120 words) covering:
-1. Which currencies are showing the strongest fundamental divergence based on recent data
-2. Key risk events or data surprises driving sentiment
+    const prompt = `You are a senior FX macro analyst. Based on REAL economic calendar data below, write a concise 3-sentence market insight (80-120 words):
+1. What recent real data releases tell us about currency strength
+2. Key upcoming high-impact events traders should watch this week
 3. One actionable bias or pair to watch
 
-Recent economic data: ${topEvents}
+Recently released: ${releasedSummary || "limited recent data"}
+Upcoming this week: ${upcomingSummary || "no major events scheduled"}
 Country scores (higher = more bullish): ${scoresSummary}
 
-Write in a professional but direct tone. No bullet points. No headers. Plain paragraph only.`;
+Professional, direct tone. No bullet points, no headers, plain paragraph only.`;
 
     try {
         const text = await callAI(prompt);
-        insightEl.innerHTML = text;
-        insightEl.className = "";
+        insightEl.innerHTML  = text;
+        insightEl.className  = "";
     } catch (err) {
         console.error("AI insight failed:", err);
         insightEl.innerHTML = `<span style="color:var(--muted);">AI insight unavailable right now.</span>`;
@@ -450,11 +391,6 @@ Write in a professional but direct tone. No bullet points. No headers. Plain par
 
 
 // ── Event listeners ──────────────────────────────────────────────────
-document.getElementById("refreshBtn").addEventListener("click", () => {
-    delete localStorage["voyager_heatmap_data"];
-    delete localStorage["voyager_heatmap_data_time"];
-    fetchEconomicData();
-});
 
 document.getElementById("impactFilter").addEventListener("change", e => {
     activeFilters.impact = e.target.value;
@@ -471,6 +407,8 @@ document.getElementById("surpriseFilter").addEventListener("change", e => {
     renderTable();
 });
 
+document.getElementById("refreshBtn").addEventListener("click", fetchEconomicData);
+
 document.querySelectorAll(".pair-chip").forEach(chip => {
     chip.addEventListener("click", () => {
         document.querySelectorAll(".pair-chip").forEach(c => c.classList.remove("active"));
@@ -480,7 +418,5 @@ document.querySelectorAll(".pair-chip").forEach(chip => {
     });
 });
 
-
-// ── Init ─────────────────────────────────────────────────────────────
 
 window.onload = fetchEconomicData;
