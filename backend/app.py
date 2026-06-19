@@ -4,7 +4,10 @@ import httpx
 import json
 import hashlib
 import time
+import calendar
 
+from models.goal import Goal
+from schemas.goal import GoalCreate
 from uuid import uuid4
 from datetime import datetime, timedelta
 from typing import List
@@ -936,3 +939,130 @@ async def get_economic_calendar(current_user=Depends(get_current_user)):
     economic_calendar_cache["timestamp"] = time.time()
 
     return cleaned
+
+# ─────────────────────────────────────────
+#  GOALS
+# ─────────────────────────────────────────
+
+@app.post("/goals")
+def set_goal(
+    goal: GoalCreate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    month = datetime.utcnow().strftime("%Y-%m")
+
+    existing = db.query(Goal).filter(
+        Goal.user_id == current_user["user_id"],
+        Goal.month == month
+    ).first()
+
+    if existing:
+        existing.target_profit = goal.target_profit
+        existing.target_trades = goal.target_trades
+        db.commit()
+        return {"message": "Goal updated"}
+
+    new_goal = Goal(
+        id=str(uuid.uuid4()),
+        user_id=current_user["user_id"],
+        month=month,
+        target_profit=goal.target_profit,
+        target_trades=goal.target_trades
+    )
+    db.add(new_goal)
+    db.commit()
+    return {"message": "Goal set"}
+
+
+@app.get("/goals/current")
+def get_current_goal(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    now   = datetime.utcnow()
+    month = now.strftime("%Y-%m")
+
+    goal = db.query(Goal).filter(
+        Goal.user_id == current_user["user_id"],
+        Goal.month == month
+    ).first()
+
+    account_ids = [
+        a.id for a in
+        db.query(Account).filter(Account.user_id == current_user["user_id"]).all()
+    ]
+    trades = db.query(Trade).filter(Trade.account_id.in_(account_ids)).all()
+
+    month_trades  = [t for t in trades if t.created_at.strftime("%Y-%m") == month]
+    actual_profit = round(sum(t.profit for t in month_trades), 2)
+    actual_trades = len(month_trades)
+    wins          = len([t for t in month_trades if t.profit > 0])
+    actual_win_rate = round((wins / actual_trades) * 100, 1) if actual_trades > 0 else 0
+
+    days_in_month = calendar.monthrange(now.year, now.month)[1]
+    day_of_month  = now.day
+    days_remaining = days_in_month - day_of_month
+
+    if not goal:
+        return {
+            "has_goal":        False,
+            "month":           month,
+            "actual_profit":   actual_profit,
+            "actual_trades":   actual_trades,
+            "actual_win_rate": actual_win_rate,
+            "days_remaining":  days_remaining
+        }
+
+    progress_pct = round((actual_profit / goal.target_profit) * 100, 1) if goal.target_profit > 0 else 0
+    trades_progress_pct = (
+        round((actual_trades / goal.target_trades) * 100, 1)
+        if goal.target_trades else None
+    )
+
+    expected_pace = (day_of_month / days_in_month) * 100
+
+    return {
+        "has_goal":            True,
+        "month":               month,
+        "target_profit":       goal.target_profit,
+        "target_trades":       goal.target_trades,
+        "actual_profit":       actual_profit,
+        "actual_trades":       actual_trades,
+        "actual_win_rate":     actual_win_rate,
+        "progress_pct":        progress_pct,
+        "trades_progress_pct": trades_progress_pct,
+        "days_remaining":      days_remaining,
+        "on_track":            progress_pct >= expected_pace
+    }
+
+
+@app.get("/goals/history")
+def get_goal_history(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    goals = db.query(Goal).filter(
+        Goal.user_id == current_user["user_id"]
+    ).order_by(Goal.month.desc()).all()
+
+    account_ids = [
+        a.id for a in
+        db.query(Account).filter(Account.user_id == current_user["user_id"]).all()
+    ]
+    trades = db.query(Trade).filter(Trade.account_id.in_(account_ids)).all()
+
+    results = []
+    for g in goals:
+        month_trades  = [t for t in trades if t.created_at.strftime("%Y-%m") == g.month]
+        actual_profit = round(sum(t.profit for t in month_trades), 2)
+
+        results.append({
+            "month":         g.month,
+            "target_profit": g.target_profit,
+            "actual_profit": actual_profit,
+            "achieved":      actual_profit >= g.target_profit,
+            "progress_pct":  round((actual_profit / g.target_profit) * 100, 1) if g.target_profit > 0 else 0
+        })
+
+    return results
