@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Correlation Matrix | Voyager Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/pgAnime.css">
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="dashboard-container">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-rocket">Voyager</i>
+            <p>ANALYTICS</p>
+        </div>
+        <nav>
+            <a href="dashboard.html"><i class="fas fa-tachograph-digital"></i> Dashboard</a>
+            <a href="accounts.html"><i class="fas fa-briefcase"></i> Accounts</a>
+            <a href="trades.html"><i class="fas fa-chart-line"></i> Trades</a>
+            <a href="analytics.html"><i class="fas fa-eye"></i> Analytics</a>
+            <a href="journal.html"><i class="fas fa-book-open-reader"></i> Journal</a>
+
+            <div class="nav-divider"><span>Market Tools</span></div>
+
+            <a href="economicHeatmap.html"><i class="fas fa-globe"></i> Economic Heatmap <span class="nav-premium-badge">Elite</span></a>
+            <a href="edgeFinder.html"><i class="fas fa-crosshairs"></i> Edge Finder <span class="nav-premium-badge">Elite</span></a>
+            <a href="currencyStrength.html"><i class="fas fa-signal"></i> Currency Strength <span class="nav-premium-badge">Elite</span></a>
+            <a href="correlationMatrix.html" class="active"><i class="fas fa-table-cells"></i> Correlation Matrix <span class="nav-premium-badge">Elite</span></a>
+
+            <div class="nav-divider"><span>Premium</span></div>
+
+            <a href="aiInsights.html"><i class="fas fa-microchip"></i> AI Insights <span class="nav-premium-badge">Pro</span></a>
+            <a href="sessionAnalysis.html"><i class="fas fa-clock"></i> Session Analysis <span class="nav-premium-badge">Starter</span></a>
+            <a href="streaks.html"><i class="fas fa-fire"></i> Streak Tracker <span class="nav-premium-badge">Starter</span></a>
+            <a href="goalTracker.html"><i class="fas fa-bullseye"></i> Goal Tracker <span class="nav-premium-badge">Starter</span></a>
+            <a href="reports.html"><i class="fas fa-file-pdf"></i> Reports <span class="nav-premium-badge">Elite</span></a>
+
+            <div class="nav-divider"><span>Account</span></div>
+
+            <a href="settings.html"><i class="fas fa-gears"></i> Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h2>Currency Pair Correlation Matrix</h2>
+            <button class="btn-primary" id="refreshBtn" style="padding:10px 18px; border:none; border-radius:10px; cursor:pointer; font-size:13px;">
+                <i class="fas fa-rotate" style="margin-right:6px;"></i>Refresh
+            </button>
+        </header>
+
+        <p style="color:var(--muted); font-size:13px; margin-bottom:24px; max-width:700px;">
+            Calculated from real daily closing prices over the last 30 trading days.
+            Values close to <strong style="color:white;">+1</strong> mean pairs move together,
+            close to <strong style="color:white;">-1</strong> mean they move opposite,
+            close to <strong style="color:white;">0</strong> means little relationship.
+        </p>
+
+        <!-- Warning banner -->
+        <div id="exposureWarning" style="margin-bottom:24px;"></div>
+
+        <!-- Matrix -->
+        <div id="matrixWrapper" style="
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            overflow-x: auto;
+            margin-bottom: 28px;
+        ">
+            <div style="color:var(--muted); padding:60px 20px; text-align:center;">
+                <i class="fas fa-spinner fa-spin" style="font-size:2rem; display:block; margin-bottom:16px; opacity:0.3;"></i>
+                Calculating correlations from real price history…
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" style="margin-bottom:28px;">
+            <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div><span>Strong positive (moves together)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div><span>Strong negative (moves opposite)</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#94a3b8;"></div><span>Little to no relationship</span></div>
+        </div>
+
+        <!-- Most correlated pairs -->
+        <div class="section-heading">
+            <i class="fas fa-link"></i> Most Correlated Pairs
+        </div>
+        <div id="topCorrelations" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        "></div>
+
+    </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/pgAnime.js"></script>
+<script>
+const token = localStorage.token;
+if(!token) window.location.href = "../login.html";
+
+let matrixData = null;
+
+function getCorrColor(value){
+    const abs = Math.abs(value);
+    if(value >= 0.7)  return { bg: `rgba(59,130,246,${0.15 + abs*0.4})`,  text: "#3b82f6" };
+    if(value <= -0.7) return { bg: `rgba(239,68,68,${0.15 + abs*0.4})`,   text: "#ef4444" };
+    if(value > 0)     return { bg: `rgba(59,130,246,${abs*0.3})`,         text: "#94a3b8" };
+    if(value < 0)     return { bg: `rgba(239,68,68,${abs*0.3})`,         text: "#94a3b8" };
+    return { bg: "rgba(148,163,184,0.05)", text: "#94a3b8" };
+}
+
+function normalizeSymbol(s){
+    return (s || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6);
+}
+
+async function loadMatrix(){
+    const wrapper = document.getElementById("matrixWrapper");
+
+    wrapper.innerHTML = `
+        <div style="color:var(--muted); padding:60px 20px; text-align:center;">
+            <i class="fas fa-spinner fa-spin" style="font-size:2rem; display:block; margin-bottom:16px; opacity:0.3;"></i>
+            Calculating correlations from real price history…
+        </div>
+    `;
+
+    try {
+        const [matrixRes, trades] = await Promise.all([
+            fetch(`${API_URL}/correlation/matrix`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            }).then(r => r.json()),
+            getTrades(token)
+        ]);
+
+        matrixData = matrixRes;
+        renderMatrix(matrixData);
+        renderTopCorrelations(matrixData);
+        renderExposureWarning(matrixData, trades);
+
+    } catch(err) {
+        console.error(err);
+        wrapper.innerHTML = `
+            <div style="color:var(--muted); padding:60px 20px; text-align:center;">
+                <i class="fas fa-triangle-exclamation" style="font-size:2rem; display:block; margin-bottom:16px; opacity:0.3;"></i>
+                Could not load correlation data. Please refresh.
+            </div>
+        `;
+    }
+}
+
+
+function renderMatrix(data){
+    const { pairs, matrix } = data;
+    const wrapper = document.getElementById("matrixWrapper");
+
+    let html = `<table style="border-collapse:collapse; width:100%; font-size:12px;">`;
+
+    html += `<tr><td></td>`;
+    pairs.forEach(p => {
+        html += `<td style="padding:8px; text-align:center; font-weight:700; color:var(--muted);">${p}</td>`;
+    });
+    html += `</tr>`;
+
+    matrix.forEach((row, i) => {
+        html += `<tr>`;
+        html += `<td style="padding:8px; font-weight:700; color:var(--muted); white-space:nowrap;">${pairs[i]}</td>`;
+        row.forEach(val => {
+            const { bg, text } = getCorrColor(val);
+            html += `
+                <td style="
+                    padding:10px; text-align:center; font-weight:700;
+                    background:${bg}; color:${text}; border-radius:6px;
+                ">${val.toFixed(2)}</td>
+            `;
+        });
+        html += `</tr>`;
+    });
+
+    html += `</table>`;
+    wrapper.innerHTML = html;
+}
+
+
+function renderTopCorrelations(data){
+    const { pairs, matrix } = data;
+    const pairsList = [];
+
+    for(let i = 0; i < pairs.length; i++){
+        for(let j = i + 1; j < pairs.length; j++){
+            pairsList.push({ a: pairs[i], b: pairs[j], corr: matrix[i][j] });
+        }
+    }
+
+    pairsList.sort((x, y) => Math.abs(y.corr) - Math.abs(x.corr));
+    const top = pairsList.slice(0, 6);
+
+    document.getElementById("topCorrelations").innerHTML = top.map(p => {
+        const { text } = getCorrColor(p.corr);
+        const label = p.corr >= 0.7 ? "Moves Together" : p.corr <= -0.7 ? "Moves Opposite" : "Weak Relationship";
+
+        return `
+            <div class="metric-card" style="text-align:center;">
+                <div style="font-weight:700; font-size:14px; margin-bottom:6px;">${p.a} ↔ ${p.b}</div>
+                <div style="font-size:1.6rem; font-weight:800; color:${text};">${p.corr.toFixed(2)}</div>
+                <div style="font-size:11px; color:var(--muted); margin-top:4px;">${label}</div>
+            </div>
+        `;
+    }).join("");
+}
+
+
+function renderExposureWarning(data, trades){
+    const { pairs, matrix } = data;
+
+    const tradedSymbols = [...new Set(trades.map(t => normalizeSymbol(t.symbol)))]
+        .filter(s => pairs.includes(s));
+
+    if(tradedSymbols.length < 2){
+        document.getElementById("exposureWarning").innerHTML = "";
+        return;
+    }
+
+    const warnings = [];
+
+    for(let i = 0; i < tradedSymbols.length; i++){
+        for(let j = i + 1; j < tradedSymbols.length; j++){
+            const idxA = pairs.indexOf(tradedSymbols[i]);
+            const idxB = pairs.indexOf(tradedSymbols[j]);
+            const corr = matrix[idxA][idxB];
+
+            if(Math.abs(corr) >= 0.7){
+                warnings.push({ a: tradedSymbols[i], b: tradedSymbols[j], corr });
+            }
+        }
+    }
+
+    if(warnings.length === 0){
+        document.getElementById("exposureWarning").innerHTML = "";
+        return;
+    }
+
+    document.getElementById("exposureWarning").innerHTML = `
+        <div style="
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 14px;
+            padding: 18px 22px;
+        ">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <i class="fas fa-triangle-exclamation" style="color:#f59e0b;"></i>
+                <strong style="color:#f59e0b; font-size:14px;">Overlap detected in your trading</strong>
+            </div>
+            ${warnings.map(w => `
+                <p style="font-size:13px; color:var(--muted); margin-bottom:4px;">
+                    You've traded both <strong style="color:white;">${w.a}</strong> and
+                    <strong style="color:white;">${w.b}</strong> —
+                    they move together ${(Math.abs(w.corr)*100).toFixed(0)}% of the time,
+                    so holding both at once may not give the diversification you'd expect.
+                </p>
+            `).join("")}
+        </div>
+    `;
+}
+
+
+document.getElementById("refreshBtn").addEventListener("click", loadMatrix);
+
+window.onload = loadMatrix;
+</script>
+</body>
+</html>
