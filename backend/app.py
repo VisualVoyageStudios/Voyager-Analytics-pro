@@ -5,6 +5,7 @@ import json
 import hashlib
 import time
 import calendar
+import traceback
 
 from models.goal import Goal
 from schemas.goal import GoalCreate
@@ -1089,8 +1090,10 @@ def pearson_correlation(x, y):
 @app.get("/correlation/matrix")
 async def get_correlation_matrix(current_user=Depends(get_current_user)):
 
+    print("=== Crrrelation matrix endpoint hit ===", flush=True)
+
     if correlation_cache["data"] and (time.time() - correlation_cache["timestamp"]) < CORRELATION_CACHE_TTL:
-        print("Correlation cache hit")
+        print("Correlation cache hit", flush=True)
         return correlation_cache["data"]
 
     pairs  = ["eurusd","gbpusd","usdjpy","usdchf","audusd","usdcad","nzdusd","eurgbp","eurjpy","gbpjpy"]
@@ -1104,8 +1107,8 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
                     timeout=15.0,
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
-                print(f"Stooq {pair} status: {res.status_code}")
-                print(f"Stooq {pair} body preview: {res.text[:200]}")
+                print(f"Stooq {pair} status: {res.status_code}", flush=True)
+                print(f"Stooq {pair} body preview: {res.text[:200]}", flush=True)
 
                 lines = res.text.strip().split("\n")
                 rows  = lines[1:]
@@ -1122,13 +1125,13 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
                 if len(series) >= 10:
                     closes[pair.upper()] = series
                 else:
-                    print(f"Not enough data points for {pair}: got {len(series)}")
+                    print(f"Not enough data points for {pair}: got {len(series)}", flush=True)
 
             except Exception as e:
-                print(f"Stooq fetch failed for {pair}: {type(e).__name__}: {str(e)}")
+                print(f"Stooq fetch failed for {pair}: {type(e).__name__}: {str(e)}", flush=True)
 
-    print(f"Total pairs with data: {len(closes)}")
-    
+    print(f"Total pairs with data: {len(closes)}", flush=True)
+
     returns = {}
     for pair, series in closes.items():
         rets = []
@@ -1140,6 +1143,7 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
     valid_pairs = [p for p in returns if len(returns[p]) >= 10]
 
     if not valid_pairs:
+        print("No valid pairs after processing", flush=True)
         raise HTTPException(status_code=500, detail="Could not fetch historical price data")
 
     min_len = min(len(returns[p]) for p in valid_pairs)
@@ -1160,3 +1164,9 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
     correlation_cache["timestamp"] = time.time()
 
     return result
+
+except HTTPExecption:
+    raise
+except Exception as e:
+    print(f"FULL TRACEBACK: {traceback.format_exc()}", flush=True)
+    raise HTTPException(status_code=500,detail=f"{type(e).__name__}: {str(e)}")
