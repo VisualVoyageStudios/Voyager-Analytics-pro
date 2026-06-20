@@ -1066,3 +1066,90 @@ def get_goal_history(
         })
 
     return results
+
+#__--
+#Correlation cache
+#_____
+correlation_cache    = {"data": None, "timestamp": 0}
+CORRELATION_CACHE_TTL = 21600  # 6 hours — daily data doesn't need refreshing often
+
+def pearson_correlation(x, y):
+    n = len(x)
+    if n == 0:
+        return 0
+    mean_x = sum(x) / n
+    mean_y = sum(y) / n
+    cov    = sum((x[i] - mean_x) * (y[i] - mean_y) for i in range(n))
+    std_x  = (sum((xi - mean_x) ** 2 for xi in x)) ** 0.5
+    std_y  = (sum((yi - mean_y) ** 2 for yi in y)) ** 0.5
+    if std_x == 0 or std_y == 0:
+        return 0
+    return cov / (std_x * std_y)
+
+@app.get("/correlation/matrix")
+async def get_correlation_matrix(current_user=Depends(get_current_user)):
+
+    if correlation_cache["data"] and (time.time() - correlation_cache["timestamp"]) < CORRELATION_CACHE_TTL:
+        print("Correlation cache hit")
+        return correlation_cache["data"]
+
+    pairs  = ["eurusd","gbpusd","usdjpy","usdchf","audusd","usdcad","nzdusd","eurgbp","eurjpy","gbpjpy"]
+    closes = {}
+
+    async with httpx.AsyncClient() as client:
+        for pair in pairs:
+            try:
+                res = await client.get(
+                    f"https://stooq.com/q/d/l/?s={pair}&i=d",
+                    timeout=15.0,
+                    headers={"User-Agent": "Mozilla/5.0"}
+                )
+                lines = res.text.strip().split("\n")
+                rows  = lines[1:]
+                series = []
+
+                for row in rows[-31:]:
+                    parts = row.split(",")
+                    if len(parts) >= 5:
+                        try:
+                            series.append(float(parts[4]))
+                        except ValueError:
+                            continue
+
+                if len(series) >= 10:
+                    closes[pair.upper()] = series
+
+            except Exception as e:
+                print(f"Stooq fetch failed for {pair}: {str(e)}")
+
+    returns = {}
+    for pair, series in closes.items():
+        rets = []
+        for i in range(1, len(series)):
+            if series[i - 1] != 0:
+                rets.append((series[i] - series[i - 1]) / series[i - 1])
+        returns[pair] = rets
+
+    valid_pairs = [p for p in returns if len(returns[p]) >= 10]
+
+    if not valid_pairs:
+        raise HTTPException(status_code=500, detail="Could not fetch historical price data")
+
+    min_len = min(len(returns[p]) for p in valid_pairs)
+
+    matrix = []
+    for p1 in valid_pairs:
+        row = []
+        r1  = returns[p1][-min_len:]
+        for p2 in valid_pairs:
+            r2   = returns[p2][-min_len:]
+            corr = pearson_correlation(r1, r2)
+            row.append(round(corr, 2))
+        matrix.append(row)
+
+    result = {"pairs": valid_pairs, "matrix": matrix}
+
+    correlation_cache["data"]      = result
+    correlation_cache["timestamp"] = time.time()
+
+    return result
