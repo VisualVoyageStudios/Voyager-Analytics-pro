@@ -1099,74 +1099,75 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
     pairs  = ["eurusd","gbpusd","usdjpy","usdchf","audusd","usdcad","nzdusd","eurgbp","eurjpy","gbpjpy"]
     closes = {}
 
-    async with httpx.AsyncClient() as client:
-        for pair in pairs:
-            try:
-                res = await client.get(
-                    f"https://stooq.com/q/d/l/?s={pair}&i=d",
-                    timeout=15.0,
-                    headers={"User-Agent": "Mozilla/5.0"}
-                )
-                print(f"Stooq {pair} status: {res.status_code}", flush=True)
-                print(f"Stooq {pair} body preview: {res.text[:200]}", flush=True)
+    try:
+        async with httpx.AsyncClient() as client:
+            for pair in pairs:
+                try:
+                    res = await client.get(
+                        f"https://stooq.com/q/d/l/?s={pair}&i=d",
+                        timeout=15.0,
+                        headers={"User-Agent": "Mozilla/5.0"}
+                    )
+                    print(f"Stooq {pair} status: {res.status_code}", flush=True)
+                    print(f"Stooq {pair} body preview: {res.text[:200]}", flush=True)
+    
+                    lines = res.text.strip().split("\n")
+                    rows  = lines[1:]
+                    series = []
+    
+                    for row in rows[-31:]:
+                        parts = row.split(",")
+                        if len(parts) >= 5:
+                            try:
+                                series.append(float(parts[4]))
+                            except ValueError:
+                                continue
+    
+                    if len(series) >= 10:
+                        closes[pair.upper()] = series
+                    else:
+                        print(f"Not enough data points for {pair}: got {len(series)}", flush=True)
+    
+                except Exception as e:
+                    print(f"Stooq fetch failed for {pair}: {type(e).__name__}: {str(e)}", flush=True)
+    
+        print(f"Total pairs with data: {len(closes)}", flush=True)
+    
+        returns = {}
+        for pair, series in closes.items():
+            rets = []
+            for i in range(1, len(series)):
+                if series[i - 1] != 0:
+                    rets.append((series[i] - series[i - 1]) / series[i - 1])
+            returns[pair] = rets
+    
+        valid_pairs = [p for p in returns if len(returns[p]) >= 10]
+    
+        if not valid_pairs:
+            print("No valid pairs after processing", flush=True)
+            raise HTTPException(status_code=500, detail="Could not fetch historical price data")
+    
+        min_len = min(len(returns[p]) for p in valid_pairs)
+    
+        matrix = []
+        for p1 in valid_pairs:
+            row = []
+            r1  = returns[p1][-min_len:]
+            for p2 in valid_pairs:
+                r2   = returns[p2][-min_len:]
+                corr = pearson_correlation(r1, r2)
+                row.append(round(corr, 2))
+            matrix.append(row)
+    
+        result = {"pairs": valid_pairs, "matrix": matrix}
+    
+        correlation_cache["data"]      = result
+        correlation_cache["timestamp"] = time.time()
+    
+        return result
 
-                lines = res.text.strip().split("\n")
-                rows  = lines[1:]
-                series = []
-
-                for row in rows[-31:]:
-                    parts = row.split(",")
-                    if len(parts) >= 5:
-                        try:
-                            series.append(float(parts[4]))
-                        except ValueError:
-                            continue
-
-                if len(series) >= 10:
-                    closes[pair.upper()] = series
-                else:
-                    print(f"Not enough data points for {pair}: got {len(series)}", flush=True)
-
-            except Exception as e:
-                print(f"Stooq fetch failed for {pair}: {type(e).__name__}: {str(e)}", flush=True)
-
-    print(f"Total pairs with data: {len(closes)}", flush=True)
-
-    returns = {}
-    for pair, series in closes.items():
-        rets = []
-        for i in range(1, len(series)):
-            if series[i - 1] != 0:
-                rets.append((series[i] - series[i - 1]) / series[i - 1])
-        returns[pair] = rets
-
-    valid_pairs = [p for p in returns if len(returns[p]) >= 10]
-
-    if not valid_pairs:
-        print("No valid pairs after processing", flush=True)
-        raise HTTPException(status_code=500, detail="Could not fetch historical price data")
-
-    min_len = min(len(returns[p]) for p in valid_pairs)
-
-    matrix = []
-    for p1 in valid_pairs:
-        row = []
-        r1  = returns[p1][-min_len:]
-        for p2 in valid_pairs:
-            r2   = returns[p2][-min_len:]
-            corr = pearson_correlation(r1, r2)
-            row.append(round(corr, 2))
-        matrix.append(row)
-
-    result = {"pairs": valid_pairs, "matrix": matrix}
-
-    correlation_cache["data"]      = result
-    correlation_cache["timestamp"] = time.time()
-
-    return result
-
-except HTTPExecption:
-    raise
-except Exception as e:
-    print(f"FULL TRACEBACK: {traceback.format_exc()}", flush=True)
-    raise HTTPException(status_code=500,detail=f"{type(e).__name__}: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"FULL TRACEBACK: {traceback.format_exc()}", flush=True)
+        raise HTTPException(status_code=500,detail=f"{type(e).__name__}: {str(e)}")
