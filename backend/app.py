@@ -1104,6 +1104,9 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
                     timeout=15.0,
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
+                print(f"Stooq {pair} status: {res.status_code}")
+                print(f"Stooq {pair} body preview: {res.text[:200]}")
+
                 lines = res.text.strip().split("\n")
                 rows  = lines[1:]
                 series = []
@@ -1118,10 +1121,14 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
 
                 if len(series) >= 10:
                     closes[pair.upper()] = series
+                else:
+                    print(f"Not enough data points for {pair}: got {len(series)}")
 
             except Exception as e:
-                print(f"Stooq fetch failed for {pair}: {str(e)}")
+                print(f"Stooq fetch failed for {pair}: {type(e).__name__}: {str(e)}")
 
+    print(f"Total pairs with data: {len(closes)}")
+    
     returns = {}
     for pair, series in closes.items():
         rets = []
