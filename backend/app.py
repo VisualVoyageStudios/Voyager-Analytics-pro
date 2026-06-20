@@ -1171,3 +1171,19 @@ async def get_correlation_matrix(current_user=Depends(get_current_user)):
     except Exception as e:
         print(f"FULL TRACEBACK: {traceback.format_exc()}", flush=True)
         raise HTTPException(status_code=500,detail=f"{type(e).__name__}: {str(e)}")
+
+@app.get("/test/frankfurter-history")
+async def test_frankfurter_history(current_user=Depends(get_current_user)):
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.get(
+                "https://api.frankfurter.app/2026-05-19..2026-06-18",
+                params={"from": "EUR", "to": "USD"},
+                timeout=15.0
+            )
+            print(f"Frankfurter history status: {res.status_code}", flush=True)
+            print(f"Frankfurter history body: {res.text[:300]}", flush=True)
+            return {"status": res.status_code, "preview": res.text[:300]}
+        except Exception as e:
+            print(f"Frankfurter history error: {str(e)}", flush=True)
+            return {"error": str(e)}
