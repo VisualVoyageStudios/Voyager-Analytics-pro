@@ -1090,7 +1090,7 @@ def pearson_correlation(x, y):
 @app.get("/correlation/matrix")
 async def get_correlation_matrix(current_user=Depends(get_current_user)):
 
-    print("=== Crrrelation matrix endpoint hit ===", flush=True)
+    print("=== Correlation matrix endpoint hit ===", flush=True)
 
     if correlation_cache["data"] and (time.time() - correlation_cache["timestamp"]) < CORRELATION_CACHE_TTL:
         print("Correlation cache hit", flush=True)
